@@ -29,6 +29,10 @@ jobs:
       - uses: ncipollo/release-action@v1
         with:
           artifacts: "dist/*"
+      # having a non-python binary in dist confuses twine
+      - name: Remove exe
+        run: |
+          rm dist/*/*.x86
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
