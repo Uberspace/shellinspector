@@ -23,4 +23,4 @@ jobs:
           python -m pip install hatch
       - name: Run tests
         run: |
-          hatch test:cov
+          hatch run test:cov
