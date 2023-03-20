@@ -3,8 +3,8 @@ import re
 import sys
 from pathlib import Path
 
-from .parser import parse
-from .runner import ShellRunner
+from shellinspector.parser import parse
+from shellinspector.runner import ShellRunner
 
 
 def get_vagrant_sshport():
