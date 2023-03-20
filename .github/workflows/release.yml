@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*' # i.e. v1.0, v20.15.10, ...
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install hatch
+      - name: Build tar.gz/wheel
+        run: |
+          hatch build
+      - name: Build exe
+        run: |
+          hatch run build-exe
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "dist/*"
