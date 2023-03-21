@@ -1,11 +1,6 @@
-# Automated Testing
+# Syntax
 
-A small tool to send commands to a test host via SSH, which their output against
-an expected one and report the status.
-
-## Usage
-
-First, prepare a spec file, e.g. `ssh_connection.spec`:
+First, prepare a spec file, e.g. `ssh_connection.inspect`:
 
 ```
 % whoami
@@ -17,7 +12,7 @@ root
 Then, run it:
 
 ```
-$ python -m test tests/ssh_connection.console
+$ python -m test tests/ssh_connection.inspect
 PASS % whoami
 PASS % pwd
 ```

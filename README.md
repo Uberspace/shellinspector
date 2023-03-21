@@ -3,7 +3,7 @@
 Open a shell session locally or via SSH, execute commands, and test what comes
 back.
 
-First, prepare a spec file, e.g. `readme.spec`:
+First, prepare a spec file, e.g. `readme.inspect`:
 
 ```
 [@local]$~ ping -c1 google.com
@@ -15,7 +15,7 @@ shellinspector
 Then, run it:
 
 ```
-$ python -m shellinspector readme.console
+$ python -m shellinspector readme.inspect
 running readme.console
 PASS [@local]$~ ping -c1 google.com
 FAIL [@local]$ whoami
