@@ -34,6 +34,9 @@ Documentation = "https://github.com/uberspace/shellinspector#readme"
 Issues = "https://github.com/uberspace/shellinspector/issues"
 Source = "https://github.com/uberspace/shellinspector"
 
+[project.scripts]
+shellinspector = "shellinspector.__main__:main"
+
 [tool.hatch.version]
 path = "src/shellinspector/__about__.py"
 

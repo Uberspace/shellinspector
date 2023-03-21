@@ -38,8 +38,7 @@ def run_spec_file(runner, path, sshconfig):
 
     return runner.run(commands, sshconfig)
 
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -72,4 +71,8 @@ if __name__ == "__main__":
     for spec_file in args.test_files:
         success &= run_spec_file(runner, spec_file, sshconfig)
 
+    return success
+
+if __name__ == "__main__":
+    success = main()
     sys.exit(0 if success else 1)
