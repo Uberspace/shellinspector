@@ -42,6 +42,36 @@ def test_parse():
     assert commands[2].source_line_no == 8
 
 
+def test_user_reuse():
+    commands = list(
+        parse(
+            "/dev/null",
+            [
+                "[someuser@]$ ls",
+                "$ ls",
+                "% ls",
+                "$ ls",
+                "[someuser@somehost]$ ls",
+                "$ ls",
+            ],
+        )
+    )
+
+    assert commands[0].user == "someuser"
+    assert commands[0].host == "remote"
+    assert commands[1].user == "someuser"
+    assert commands[1].host == "remote"
+    assert commands[2].user == "root"
+    assert commands[2].host == "remote"
+    assert commands[3].user == "someuser"
+    assert commands[3].host == "remote"
+    assert commands[4].user == "someuser"
+    assert commands[4].host == "somehost"
+    assert commands[5].user == "someuser"
+    assert commands[5].host == "somehost"
+
+
+
 @pytest.mark.parametrize(
     "lines",
     [

@@ -49,6 +49,7 @@ def parse(path, lines):
 
     current_command = None
     last_user = None
+    last_host = "remote"
 
     for line_no, line in enumerate(lines, 1):
 
@@ -96,12 +97,16 @@ def parse(path, lines):
             if execution_mode == "run_command_root":
                 user = "root"
 
-            if user is None:
-                user = last_user
+            if execution_mode == "run_command_user":
+                if user is None:
+                    user = last_user
+
                 last_user = user
 
             if host is None:
-                host = "remote"
+                host = last_host
+
+            last_host = host
 
             current_command = Command(
                 execution_mode,
