@@ -20,6 +20,21 @@ def get_vagrant_sshport():
     return int(re.search("ansible_port=([0-9]+)", content)[1])
 
 
+def get_ssh_config(target_host):
+    if target_host == "vagrant":
+        return {
+            "server": "127.0.0.1",
+            "username": "root",
+            "port": get_vagrant_sshport(),
+        }
+    else:
+        return {
+            "server": target_host,
+            "username": "root",
+            "port": 22,
+        }
+
+
 def run_spec_file(runner, path, sshconfig):
     print(f"running {path}")
 
@@ -38,7 +53,19 @@ def run_spec_file(runner, path, sshconfig):
 
     return runner.run(commands, sshconfig)
 
-def main():
+
+def run(target_host, spec_files):
+    sshconfig = get_ssh_config(target_host)
+    success = True
+    runner = ShellRunner()
+
+    for spec_file in spec_files:
+        success &= run_spec_file(runner, spec_file, sshconfig)
+
+    return 0 if success else 1
+
+
+def parse_args(argv=None):
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -46,33 +73,19 @@ def main():
         default="vagrant",
     )
     parser.add_argument(
-        "test_files",
+        "spec_files",
         nargs="+",
     )
 
     args = parser.parse_args()
 
-    if args.target_host == "vagrant":
-        sshconfig = {
-            "server": "127.0.0.1",
-            "username": "root",
-            "port": get_vagrant_sshport(),
-        }
-    else:
-        sshconfig = {
-            "server": args.target_host,
-            "username": "root",
-            "port": 22,
-        }
+    return args
 
-    success = True
-    runner = ShellRunner()
 
-    for spec_file in args.test_files:
-        success &= run_spec_file(runner, spec_file, sshconfig)
+def main():
+    args = parse_args()
+    return run(**vars(args))
 
-    return success
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    sys.exit(main())
