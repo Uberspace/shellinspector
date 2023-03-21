@@ -42,6 +42,8 @@ def parse(path, lines):
         " "
     )
 
+    path = Path(path)
+
     for line_no, line in enumerate(lines, 1):
 
         def print_error(msg):
