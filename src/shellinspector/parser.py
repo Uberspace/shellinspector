@@ -92,7 +92,7 @@ def parse(path, lines):
                 last_user = user
 
             if host is None:
-                host = "u8"
+                host = "remote"
 
             last_command = Command(
                 execution_mode,

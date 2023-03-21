@@ -130,12 +130,12 @@ class ShellRunner:
 
     def run(self, commands, sshconfig):
         ctx = {
-            "U8_TARGET": sshconfig["server"],
-            "U8_TARGET_SSH_USERNAME": sshconfig["username"],
-            "U8_TARGET_SSH_PORT": sshconfig["port"],
+            "SI_TARGET": sshconfig["server"],
+            "SI_TARGET_SSH_USERNAME": sshconfig["username"],
+            "SI_TARGET_SSH_PORT": sshconfig["port"],
         }
 
-        u8_session_key = (sshconfig["username"], sshconfig["server"], sshconfig["port"])
+        remote_session_key = (sshconfig["username"], sshconfig["server"], sshconfig["port"])
 
         for cmd in commands:
             if cmd.execution_mode not in ("run_command_root", "run_command_user"):
@@ -149,8 +149,8 @@ class ShellRunner:
             if cmd.user is not None or cmd.host is not None:
                 if cmd.host == "local":
                     session_key = (None, "local", None)
-                elif cmd.host == "u8":
-                    session_key = u8_session_key
+                elif cmd.host == "remote":
+                    session_key = remote_session_key
 
             with self._get_session(session_key, ctx) as session:
                 session.sendline(cmd.command)

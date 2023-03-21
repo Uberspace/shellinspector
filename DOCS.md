@@ -130,7 +130,7 @@ a shell prompt:
 [@local]$ hostname
 luto-portable
 # run as a different user on uberspace8 VM
-[usr1@u8]$ whoami
+[usr1@remote]$ whoami
 usr1
 ```
 
