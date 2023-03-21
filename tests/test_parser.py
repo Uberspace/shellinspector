@@ -2,6 +2,8 @@ from pathlib import Path
 import pytest
 
 from shellinspector.parser import parse
+from shellinspector.parser import AssertMode
+from shellinspector.parser import ExecutionMode
 
 
 def test_parse():
@@ -23,21 +25,21 @@ def test_parse():
     )
 
     assert len(commands) == 3
-    assert commands[0].execution_mode == "run_command_user"
+    assert commands[0].execution_mode == ExecutionMode.USER
     assert commands[0].command == "echo a"
-    assert commands[0].assert_mode == "literal"
+    assert commands[0].assert_mode == AssertMode.LITERAL
     assert commands[0].expected == "a\n"
     assert commands[0].source_file == Path("/dev/null")
     assert commands[0].source_line_no == 1
-    assert commands[1].execution_mode == "run_command_root"
+    assert commands[1].execution_mode == ExecutionMode.ROOT
     assert commands[1].command == "ls"
-    assert commands[1].assert_mode == "literal"
+    assert commands[1].assert_mode == AssertMode.LITERAL
     assert commands[1].expected == "file\ndir\notherfile\n"
     assert commands[1].source_file == Path("/dev/null")
     assert commands[1].source_line_no == 4
-    assert commands[2].execution_mode == "run_command_root"
+    assert commands[2].execution_mode == ExecutionMode.ROOT
     assert commands[2].command == "ls dir"
-    assert commands[2].assert_mode == "regex"
+    assert commands[2].assert_mode == AssertMode.REGEX
     assert commands[2].source_file == Path("/dev/null")
     assert commands[2].source_line_no == 8
 
@@ -90,43 +92,43 @@ def test_empty(lines):
     [
         (
             "% ls",
-            {"execution_mode": "run_command_root", "assert_mode": "literal"},
+            {"execution_mode": ExecutionMode.ROOT, "assert_mode": AssertMode.LITERAL},
         ),
         (
             "%~ ls",
-            {"execution_mode": "run_command_root", "assert_mode": "regex"},
+            {"execution_mode": ExecutionMode.ROOT, "assert_mode": AssertMode.REGEX},
         ),
         (
             "%_ ls",
-            {"execution_mode": "run_command_root", "assert_mode": "ignore"},
+            {"execution_mode": ExecutionMode.ROOT, "assert_mode": AssertMode.IGNORE},
         ),
         (
             "$ ls",
-            {"execution_mode": "run_command_user", "assert_mode": "literal"},
+            {"execution_mode": ExecutionMode.USER, "assert_mode": AssertMode.LITERAL},
         ),
         (
             "$~ ls",
-            {"execution_mode": "run_command_user", "assert_mode": "regex"},
+            {"execution_mode": ExecutionMode.USER, "assert_mode": AssertMode.REGEX},
         ),
         (
             "$_ ls",
-            {"execution_mode": "run_command_user", "assert_mode": "ignore"},
+            {"execution_mode": ExecutionMode.USER, "assert_mode": AssertMode.IGNORE},
         ),
         (
             "[someuser@somehost]$ ls",
-            {"execution_mode": "run_command_user", "user": "someuser", "host": "somehost"},
+            {"execution_mode": ExecutionMode.USER, "user": "someuser", "host": "somehost"},
         ),
         (
             "[someuser@]$ ls",
-            {"execution_mode": "run_command_user", "user": "someuser", "host": "remote"},
+            {"execution_mode": ExecutionMode.USER, "user": "someuser", "host": "remote"},
         ),
         (
             "[@local]$ ls",
-            {"execution_mode": "run_command_user", "user": None, "host": "local"},
+            {"execution_mode": ExecutionMode.USER, "user": None, "host": "local"},
         ),
         (
             "[someuser@local]% ls",
-            {"execution_mode": "run_command_root", "user": "root", "host": "local"},
+            {"execution_mode": ExecutionMode.ROOT, "user": "root", "host": "local"},
         ),
     ],
 )
@@ -155,17 +157,17 @@ def test_include():
     )
 
     assert len(commands) == 3
-    assert commands[0].execution_mode == "run_command_root"
+    assert commands[0].execution_mode == ExecutionMode.ROOT
     assert commands[0].command == "ls"
     assert commands[0].expected == "file\n"
     assert commands[0].source_file == path
     assert commands[0].source_line_no == 1
-    assert commands[1].execution_mode == "run_command_root"
+    assert commands[1].execution_mode == ExecutionMode.ROOT
     assert commands[1].command == "whoami"
     assert commands[1].expected == "root\n"
     assert commands[1].source_file == Path(__file__).parent / "data/test.spec"
     assert commands[1].source_line_no == 1
-    assert commands[2].execution_mode == "run_command_root"
+    assert commands[2].execution_mode == ExecutionMode.ROOT
     assert commands[2].command == "ls"
     assert commands[2].expected == "file\n"
     assert commands[2].source_file == path

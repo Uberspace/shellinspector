@@ -1,26 +1,27 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from enum import Enum
 
-EXECUTION_MODES = {
-    "$": "run_command_user",
-    "%": "run_command_root",
-}
 
-ASSERT_MODES = {
-    "": "literal",
-    "~": "regex",
-    "_": "ignore",
-}
+class ExecutionMode(Enum):
+    USER = "$"
+    ROOT = "%"
+
+
+class AssertMode(Enum):
+    LITERAL = "="
+    REGEX = "~"
+    IGNORE = "_"
 
 
 @dataclass
 class Command:
-    execution_mode: str
+    execution_mode: ExecutionMode
     command: str
     user: str
     host: str
-    assert_mode: str
+    assert_mode: AssertMode
     expected: str
     source_file: Path
     source_line_no: int
@@ -38,9 +39,9 @@ RE_PREFIX = re.compile(
     r"(?P<host>[a-z]+)?"
     r"\])?"
     # $ or %
-    rf"(?P<execution_mode>[{''.join(EXECUTION_MODES.keys())}])"
+    rf"(?P<execution_mode>[{''.join(m.value for m in ExecutionMode)}])"
     # nothing or _ or ~ or
-    rf"(?P<assert_mode>[{''.join(ASSERT_MODES.keys())}]?)"
+    rf"(?P<assert_mode>[{''.join(m.value for m in AssertMode)}]?)"
     " "
 )
 
@@ -65,8 +66,8 @@ def parse(path, lines):
 
         prefix = RE_PREFIX.match(line)
 
+        # output ended, next command follows
         if (prefix or is_include) and current_command:
-            # output ended, next command follows
             yield current_command
             current_command = None
 
@@ -80,33 +81,31 @@ def parse(path, lines):
             yield from parse(include_path, include_path.read_text().splitlines())
             continue
 
+        # output before very first command
         if not prefix and not current_command:
-            # output before very first command
             print_error("syntax error: unknown prefix or no prefix")
             return False
 
+        # start of command
         if prefix:
-            # start of command
             command = line[prefix.span()[1] :]
             user, host, execution_mode, assert_mode = prefix.group(
                 "user", "host", "execution_mode", "assert_mode"
             )
-            execution_mode = EXECUTION_MODES[execution_mode]
-            assert_mode = ASSERT_MODES[assert_mode]
 
-            if execution_mode == "run_command_root":
+            execution_mode = ExecutionMode(execution_mode)
+            assert_mode = AssertMode(assert_mode if assert_mode else AssertMode.LITERAL.value)
+
+            if execution_mode == ExecutionMode.ROOT:
                 user = "root"
 
-            if execution_mode == "run_command_user":
-                if user is None:
-                    user = last_user
-
-                last_user = user
-
-            if host is None:
-                host = last_host
+            user = user or last_user
+            host = host or last_host
 
             last_host = host
+
+            if execution_mode == ExecutionMode.USER:
+                last_user = user
 
             current_command = Command(
                 execution_mode,

@@ -11,6 +11,8 @@ from pexpect import spawn
 from pexpect.pxssh import ExceptionPxssh
 from termcolor import colored
 
+from shellinspector.parser import AssertMode
+
 
 class localshell(pxssh.pxssh):
     """allow to treat local shell sessons as ssh connections, so we can use the same code for both"""
@@ -138,11 +140,6 @@ class ShellRunner:
         remote_session_key = (sshconfig["username"], sshconfig["server"], sshconfig["port"])
 
         for cmd in commands:
-            if cmd.execution_mode not in ("run_command_root", "run_command_user"):
-                raise NotImplementedError(
-                    f"unknown execution_mode: {cmd.execution_mode}"
-                )
-
             print(colored(f"RUN  {cmd.line}", "light_grey"), end="")
             sys.stdout.flush()
 
@@ -170,11 +167,11 @@ class ShellRunner:
                 assert session.prompt(), "getting command RC failed"
                 returncode = int(session.before.strip())
 
-            if cmd.assert_mode == "literal":
+            if cmd.assert_mode == AssertMode.LITERAL:
                 matches = actual == cmd.expected.strip()
-            elif cmd.assert_mode == "regex":
+            elif cmd.assert_mode == AssertMode.REGEX:
                 matches = re.search(cmd.expected.strip(), actual, re.MULTILINE)
-            elif cmd.assert_mode == "ignore":
+            elif cmd.assert_mode == AssertMode.IGNORE:
                 matches = True
             else:
                 raise NotImplementedError(f"Unknown assert_mode: {cmd.assert_mode}")
