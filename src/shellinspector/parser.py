@@ -64,13 +64,14 @@ def parse(path, lines):
             last_command = None
 
         if is_include:
-            include_path = (path.parent / line).resolve()
+            include_path = (path.parent / line[1:]).resolve()
             if not include_path.exists():
                 print_error(
                     f"include error: file '{line}' (=> '{include_path}') does not exist"
                 )
                 return False
-            yield from parse(include_path)
+            yield from parse(include_path, include_path.read_text().splitlines())
+            continue
 
         if not prefix and not last_command:
             # output before very first command
