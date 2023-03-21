@@ -12,6 +12,10 @@ def get_vagrant_sshport():
         Path(__file__).parent
         / "../.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory"
     )
+
+    if not inventory_file.exists():
+        return None
+
     content = inventory_file.read_text()
     return int(re.search("ansible_port=([0-9]+)", content)[1])
 
