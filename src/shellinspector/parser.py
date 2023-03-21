@@ -67,7 +67,7 @@ def parse(path, lines):
             include_path = (path.parent / line).resolve()
             if not include_path.exists():
                 print_error(
-                    "include error: file '{line}' (=> '{include_path}') does not exist"
+                    f"include error: file '{line}' (=> '{include_path}') does not exist"
                 )
                 return False
             yield from parse(include_path)
