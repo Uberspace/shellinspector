@@ -26,23 +26,29 @@ class Command:
     source_line_no: int
     line: str
 
+# parse a line like
+#   [user@host]$ ls
+# into ("user", "host", "$")
+RE_PREFIX = re.compile(
+    r"^"
+    # optional [user@host]
+    r"(?:\["
+    r"(?P<user>[a-z]+)?"
+    r"@"
+    r"(?P<host>[a-z]+)?"
+    r"\])?"
+    # $ or %
+    rf"(?P<execution_mode>[{''.join(EXECUTION_MODES.keys())}])"
+    # nothing or _ or ~ or
+    rf"(?P<assert_mode>[{''.join(ASSERT_MODES.keys())}]?)"
+    " "
+)
 
 def parse(path, lines):
-    last_command = None
-    last_user = None
-    re_prefix = re.compile(
-        r"^"
-        r"(?:\["
-        r"(?P<user>[a-z]+)?"
-        r"@"
-        r"(?P<host>[a-z]+)?"
-        r"\])?"
-        rf"(?P<execution_mode>[{''.join(EXECUTION_MODES.keys())}])"
-        rf"(?P<assert_mode>[{''.join(ASSERT_MODES.keys())}]?)"
-        " "
-    )
-
     path = Path(path)
+
+    current_command = None
+    last_user = None
 
     for line_no, line in enumerate(lines, 1):
 
@@ -53,15 +59,15 @@ def parse(path, lines):
         is_comment = line.startswith("#")
         is_include = line.startswith("<")
 
-        prefix = re_prefix.match(line)
-
         if is_comment:
             continue
 
-        if (prefix or is_include) and last_command:
+        prefix = RE_PREFIX.match(line)
+
+        if (prefix or is_include) and current_command:
             # output ended, next command follows
-            yield last_command
-            last_command = None
+            yield current_command
+            current_command = None
 
         if is_include:
             include_path = (path.parent / line[1:]).resolve()
@@ -73,7 +79,7 @@ def parse(path, lines):
             yield from parse(include_path, include_path.read_text().splitlines())
             continue
 
-        if not prefix and not last_command:
+        if not prefix and not current_command:
             # output before very first command
             print_error("syntax error: unknown prefix or no prefix")
             return False
@@ -97,7 +103,7 @@ def parse(path, lines):
             if host is None:
                 host = "remote"
 
-            last_command = Command(
+            current_command = Command(
                 execution_mode,
                 command,
                 user,
@@ -110,7 +116,7 @@ def parse(path, lines):
             )
         else:
             # output of last command
-            last_command.expected += line + "\n"
+            current_command.expected += line + "\n"
 
-    if last_command:
-        yield last_command
+    if current_command:
+        yield current_command
