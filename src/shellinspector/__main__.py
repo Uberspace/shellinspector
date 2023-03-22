@@ -51,7 +51,13 @@ def run_spec_file(runner, path, sshconfig):
         print("\n".join(f"ERROR {e.source_file.name}:{e.source_line_no}:\n  {e.source_line}\n  {e.message}" for e in errors))
         return False
 
-    return runner.run(commands, sshconfig)
+    context = {
+        "SI_TARGET": sshconfig["server"],
+        "SI_TARGET_SSH_USERNAME": sshconfig["username"],
+        "SI_TARGET_SSH_PORT": sshconfig["port"],
+    }
+
+    return runner.run(commands, sshconfig, context)
 
 
 def run(target_host, spec_files):

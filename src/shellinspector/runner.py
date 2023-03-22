@@ -96,47 +96,72 @@ class ShellRunner:
         self.sessions = {}
 
     @contextmanager
-    def _get_session(self, key, ctx):
+    def _get_session(self, username, server, port):
+        """
+        Create or reuse a shell session defined by key=(username, server, port).
+
+            with _get_session(username, server, port) as session:
+                session.sendline("echo a")
+                session.prompt()
+                assert session.before.decode() == "a"
+
+        If server is "local", this opens a shell session as the current user on
+        the current machine. Username and port are ignored. If server is
+        anything else, this uses the ssh(1) command to establish a connection.
+
+        It also makes sure that the environment is as clean as possible.
+        You can set environment variables freely.
+
+        session is a `pexpect.pxssh.pxssh` object:
+        https://pexpect.readthedocs.io/en/stable/api/pxssh.html#pxssh-class
+        """
+
+        if server == "local":
+            # ignore username, if we're operating locally
+            key = (None, "local", None)
+        else:
+            key = (username, server, port)
+
         if key not in self.sessions:
+            # connect, if there is no session
             if key[1] == "local":
-                self.sessions[(None, "local", None)] = get_localshell()
+                session = self.sessions[key] = get_localshell()
             else:
-                self.sessions[key] = get_ssh_session(
+                session = self.sessions[key] = get_ssh_session(
                     {
-                        "username": key[0],
-                        "server": key[1],
-                        "port": key[2],
+                        "username":username,
+                        "server": server,
+                        "port": port,
                     }
                 )
+        else:
+            # reuse, if we're already connected
+            session = self.sessions[key]
 
-        self.sessions[key].sendline("bash")
+        # launch a child shell so we can easily reset the environment variables
+        session.sendline("bash")
 
-        self.sessions[key].set_unique_prompt()
-
-        # trigger a fresh prompt to .prompt() is faster
-        self.sessions[key].sendline("")
-        assert self.sessions[key].prompt()
-
-        for k, v in ctx.items():
-            self.sessions[key].sendline(f"export {k}='{shlex.quote(str(v))}'")
-            assert self.sessions[key].prompt()
+        # new shell means new prompt, so reconfigure the prompt recognition
+        session.set_unique_prompt()
+        # trigger a fresh prompt so .prompt() is faster
+        session.sendline("")
+        assert session.prompt()
 
         try:
-            yield self.sessions[key]
+            # do the actual work on the caller's side
+            yield session
         finally:
-            if self.sessions[key].closed:
+            if session.closed:
+                # caller closed or crashed the session,
+                # forget it so it will be reinitialized if we need it again
                 del self.sessions[key]
             else:
-                self.sessions[key].sendline("exit")
-                assert self.sessions[key].prompt()
+                # session is still alive, exit the extra shell we started
+                # earlier to reset the environment variables
+                session.sendline("exit")
+                assert session.prompt()
 
-    def run(self, commands, sshconfig):
-        ctx = {
-            "SI_TARGET": sshconfig["server"],
-            "SI_TARGET_SSH_USERNAME": sshconfig["username"],
-            "SI_TARGET_SSH_PORT": sshconfig["port"],
-        }
-
+    def run(self, commands, sshconfig, context):
         remote_session_key = (sshconfig["username"], sshconfig["server"], sshconfig["port"])
 
         for cmd in commands:
@@ -149,7 +174,11 @@ class ShellRunner:
                 elif cmd.host == "remote":
                     session_key = remote_session_key
 
-            with self._get_session(session_key, ctx) as session:
+            with self._get_session(*session_key) as session:
+                for k, v in context.items():
+                    session.sendline(f"export {k}='{shlex.quote(str(v))}'")
+                    assert session.prompt()
+
                 session.sendline(cmd.command)
                 found_prompt = session.prompt()
                 actual = session.before.decode().strip()
