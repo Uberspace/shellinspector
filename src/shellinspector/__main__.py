@@ -27,10 +27,11 @@ def get_ssh_config(target_host):
             "port": get_vagrant_sshport(),
         }
     else:
+        host, _, port = target_host.partition(':')
         return {
-            "server": target_host,
+            "server": host,
             "username": "root",
-            "port": 22,
+            "port": port or 22,
         }
 
 
@@ -81,6 +82,7 @@ def parse_args(argv=None):
     parser.add_argument(
         "--target-host",
         default="vagrant",
+        help="remote host, format: hostname[:port], e.g. '127.0.0.1:22' or '127.0.0.1'"
     )
     parser.add_argument(
         "--ssh-key",
