@@ -1,0 +1,2 @@
+[@local]$ test -f $TMP/_$RANDOM
+a
