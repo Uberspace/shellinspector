@@ -5,6 +5,8 @@ from pathlib import Path
 
 from shellinspector.parser import parse
 from shellinspector.runner import ShellRunner
+from shellinspector.runner import RunnerEvent
+from shellinspector.reporter import print_runner_event
 
 
 def get_vagrant_sshport():
@@ -66,7 +68,12 @@ def run(target_host, spec_files):
     runner = ShellRunner()
 
     for spec_file in spec_files:
-        success &= run_spec_file(runner, spec_file, sshconfig)
+        event = None
+
+        for event in run_spec_file(runner, spec_file, sshconfig):
+            print_runner_event(event[0], event[1], **event[2])
+
+        success = success & (event == RunnerEvent.RUN_SUCCEEDED)
 
     return 0 if success else 1
 

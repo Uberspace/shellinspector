@@ -3,13 +3,12 @@
 import os
 import re
 import shlex
-import sys
+import enum
 from contextlib import contextmanager
 
 from pexpect import pxssh
 from pexpect import spawn
 from pexpect.pxssh import ExceptionPxssh
-from termcolor import colored
 
 from shellinspector.parser import AssertMode
 
@@ -78,17 +77,14 @@ def get_localshell():
         return shell
 
 
-def print_with_prefix(prefix, text, color):
-    print(colored(prefix, "light_grey"))
-    for line in text.splitlines():
-        print(colored(f"{' ' * 3} {line.strip()}", color))
-
-
-def reset_line():
-    if "TERM" in os.environ:
-        sys.stdout.write("\033[2K\033[1G")
-    else:
-        sys.stdout.write("\n")
+class RunnerEvent(enum.Enum):
+    COMMAND_STARTING = enum.auto()
+    COMMAND_COMPLETED = enum.auto()
+    COMMAND_PASSED = enum.auto()
+    COMMAND_FAILED = enum.auto()
+    RUN_SUCCEEDED = enum.auto()
+    RUN_FAILED = enum.auto()
+    ERROR = enum.auto()
 
 
 class ShellRunner:
@@ -165,8 +161,7 @@ class ShellRunner:
         remote_session_key = (sshconfig["username"], sshconfig["server"], sshconfig["port"])
 
         for cmd in commands:
-            print(colored(f"RUN  {cmd.line}", "light_grey"), end="")
-            sys.stdout.flush()
+            yield RunnerEvent.COMMAND_STARTING, cmd, {}
 
             if cmd.user is not None or cmd.host is not None:
                 if cmd.host == "local":
@@ -181,41 +176,49 @@ class ShellRunner:
 
                 session.sendline(cmd.command)
                 found_prompt = session.prompt()
-                actual = session.before.decode().strip()
+                actual_output = session.before.decode().strip()
 
-                reset_line()
+                yield RunnerEvent.COMMAND_COMPLETED, cmd, {}
 
                 if not found_prompt:
-                    print(colored(f"FAIL {cmd.line}", "red"))
-                    print(colored("could not find prompt", "red"))
-                    print_with_prefix("output before giving up: ", actual, "red")
+                    yield RunnerEvent.ERROR, cmd, {"message": "could not find prompt for command", "actual": actual}
                     session.close()
-                    return False
+                    break
 
                 session.sendline("echo $?")
-                assert session.prompt(), "getting command RC failed"
-                returncode = int(session.before.strip())
+                found_prompt = session.prompt()
+                actual_rc = session.before.decode().strip()
+
+                if not found_prompt:
+                    yield RunnerEvent.ERROR, cmd, {"message": "could not find prompt for return code", "actual": actual_rc}
+                    session.close()
+                    break
+
+                returncode = int(actual_rc)
 
             if cmd.assert_mode == AssertMode.LITERAL:
-                matches = actual == cmd.expected.strip()
+                output_matches = actual_output == cmd.expected.strip()
             elif cmd.assert_mode == AssertMode.REGEX:
-                matches = re.search(cmd.expected.strip(), actual, re.MULTILINE)
+                output_matches = re.search(cmd.expected.strip(), actual_output, re.MULTILINE)
             elif cmd.assert_mode == AssertMode.IGNORE:
-                matches = True
+                output_matches = True
             else:
                 raise NotImplementedError(f"Unknown assert_mode: {cmd.assert_mode}")
 
-            passes = matches and returncode == 0
-
-            if passes:
-                print(colored(f"PASS {cmd.line}", "green"))
+            if output_matches and returncode == 0:
+                yield RunnerEvent.COMMAND_PASSED, cmd, {"returncode": returncode, "actual": actual_output}
             else:
-                print(colored(f"FAIL {cmd.line}", "red"))
-                if returncode != 0:
-                    print(colored(f"command failed (RC={returncode})", "red"))
-                if not matches:
-                    print_with_prefix("expected: ", cmd.expected, "light_grey")
-                    print_with_prefix("actual: ", actual, "white")
-                return False
+                reasons = []
 
-        return True
+                if returncode != 0:
+                    reasons.append("returncode")
+                if not output_matches:
+                    reasons.append("output")
+
+                yield RunnerEvent.COMMAND_FAILED, cmd, {"reasons": reasons, "returncode": returncode, "actual": actual_output}
+                break
+        else:
+            yield RunnerEvent.RUN_FAILED, None, {}
+            return
+
+        yield RunnerEvent.RUN_SUCCEEDED, None, {}
