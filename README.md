@@ -3,6 +3,8 @@
 Open a shell session locally or via SSH, execute commands, and test what comes
 back.
 
+[![asciicast](https://asciinema.org/a/IfzFtiTPjabw4etcMJmpcuH8f.svg)](https://asciinema.org/a/IfzFtiTPjabw4etcMJmpcuH8f)
+
 First, prepare a spec file, e.g. `readme.inspect`:
 
 ```
@@ -24,7 +26,5 @@ expected:
 actual: 
     luto
 ```
-
-[![asciicast](https://asciinema.org/a/m2ovzpbCvOJFfudUEDhvrD09R.svg)](https://asciinema.org/a/m2ovzpbCvOJFfudUEDhvrD09R)
 
 For more details have a look at [`docs/syntax.md`](docs/syntax.md).
