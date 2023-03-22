@@ -1,0 +1,5 @@
+% whoami
+root
+% echo a
+a
+% test -d $TMP
