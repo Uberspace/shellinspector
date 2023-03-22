@@ -181,7 +181,7 @@ class ShellRunner:
                 yield RunnerEvent.COMMAND_COMPLETED, cmd, {}
 
                 if not found_prompt:
-                    yield RunnerEvent.ERROR, cmd, {"message": "could not find prompt for command", "actual": actual}
+                    yield RunnerEvent.ERROR, cmd, {"message": "could not find prompt for command", "actual": actual_output}
                     session.close()
                     break
 
