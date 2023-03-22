@@ -45,10 +45,11 @@ def run_spec_file(runner, path, sshconfig):
         return False
 
     lines = spec_file.read_text().splitlines()
-    commands = parse(spec_file, lines)
+    errors, commands = parse(spec_file, lines)
 
-    if commands is False:
+    if errors:
         print("parsing failed")
+        print("\n".join(errors))
         return False
 
     return runner.run(commands, sshconfig)

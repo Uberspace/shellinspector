@@ -1,3 +1,4 @@
+from errno import EROFS
 from pathlib import Path
 import pytest
 
@@ -7,24 +8,24 @@ from shellinspector.parser import ExecutionMode
 
 
 def test_parse():
-    commands = list(
-        parse(
-            "/dev/null",
-            [
-                "$ echo a",
-                "# ignored",
-                "a",
-                "% ls",
-                "file",
-                "dir",
-                "otherfile",
-                "%~ ls dir",
-                "file",
-            ],
-        )
+    errors, commands = parse(
+        "/dev/null",
+        [
+            "$ echo a",
+            "# ignored",
+            "a",
+            "% ls",
+            "file",
+            "dir",
+            "otherfile",
+            "%~ ls dir",
+            "file",
+        ],
     )
 
+    assert len(errors) == 0
     assert len(commands) == 3
+
     assert commands[0].execution_mode == ExecutionMode.USER
     assert commands[0].command == "echo a"
     assert commands[0].assert_mode == AssertMode.LITERAL
@@ -44,20 +45,80 @@ def test_parse():
     assert commands[2].source_line_no == 8
 
 
-def test_user_reuse():
-    commands = list(
-        parse(
-            "/dev/null",
-            [
-                "[someuser@]$ ls",
-                "$ ls",
-                "% ls",
-                "$ ls",
-                "[someuser@somehost]$ ls",
-                "$ ls",
-            ],
-        )
+def test_parse_error():
+    path = Path(__file__).parent / "virtual.spec"
+    errors, commands = parse(
+        path,
+        [
+            "random text1",
+            "random text2",
+            "% ls1",
+            "file",
+            "% ls2",
+            "file",
+        ],
     )
+
+    assert len(errors) == 2
+    assert errors[0].source_file == path
+    assert errors[0].source_line_no == 1
+    assert errors[0].source_line == "random text1"
+    assert "output before first command," in errors[0].message
+    assert errors[1].source_file == path
+    assert errors[1].source_line_no == 2
+    assert errors[1].source_line == "random text2"
+    assert "output before first command," in errors[1].message
+
+    assert len(commands) == 2
+    assert commands[0].command == "ls1"
+    assert commands[0].expected
+    assert commands[0].source_line_no == 3
+    assert commands[1].command == "ls2"
+    assert commands[1].expected
+    assert commands[1].source_line_no == 5
+
+
+def test_parse_error_include():
+    path = Path(__file__).parent / "virtual.spec"
+    errors, commands = parse(
+        path,
+        [
+            "% ls1",
+            "file",
+            "<data/test_error.spec",
+        ],
+    )
+
+    assert len(errors) == 1
+    assert errors[0].source_file == path.parent / "data/test_error.spec"
+    assert errors[0].source_line_no == 1
+    assert errors[0].source_line == "a"
+
+    assert len(commands) == 2
+    assert commands[0].command == "ls1"
+    assert commands[0].expected
+    assert commands[0].source_file == path
+    assert commands[0].source_line_no == 1
+    assert commands[1].command == "ls2"
+    assert commands[1].expected
+    assert commands[1].source_file == path.parent / "data/test_error.spec"
+    assert commands[1].source_line_no == 2
+
+
+def test_user_reuse():
+    errors, commands = parse(
+        "/dev/null",
+        [
+            "[someuser@]$ ls",
+            "$ ls",
+            "% ls",
+            "$ ls",
+            "[someuser@somehost]$ ls",
+            "$ ls",
+        ],
+    )
+
+    assert len(errors) == 0
 
     assert commands[0].user == "someuser"
     assert commands[0].host == "remote"
@@ -74,16 +135,9 @@ def test_user_reuse():
 
 
 
-@pytest.mark.parametrize(
-    "lines",
-    [
-        [],
-        [""],
-        ["\n"],
-    ]
-)
-def test_empty(lines):
-    commands = list(parse("/dev/null", lines))
+def test_empty():
+    errors, commands = parse("/dev/null", [])
+    assert len(errors) == 0
     assert len(commands) == 0
 
 
@@ -133,30 +187,31 @@ def test_empty(lines):
     ],
 )
 def test_variants(line, result):
-    command = next(parse("/dev/null", [line]))
+    errors, commands = parse("/dev/null", [line])
 
-    assert command.command == "ls"
+    assert len(errors) == 0
+    assert commands[0].command == "ls"
 
     for k, v in result.items():
-        assert getattr(command, k) == v
+        assert getattr(commands[0], k) == v, k
 
 
 def test_include():
     path = Path(__file__).parent / "virtual.spec"
-    commands = list(
-        parse(
-            path,
-            [
-                "% ls",
-                "file",
-                f"<data/test.spec",
-                "% ls",
-                "file",
-            ],
-        )
+    errors, commands = parse(
+        path,
+        [
+            "% ls",
+            "file",
+            f"<data/test.spec",
+            "% ls",
+            "file",
+        ],
     )
 
+    assert len(errors) == 0
     assert len(commands) == 3
+
     assert commands[0].execution_mode == ExecutionMode.ROOT
     assert commands[0].command == "ls"
     assert commands[0].expected == "file\n"
@@ -172,3 +227,20 @@ def test_include():
     assert commands[2].expected == "file\n"
     assert commands[2].source_file == path
     assert commands[2].source_line_no == 4
+
+
+def test_include_missing_file():
+    path = Path(__file__).parent / "virtual.spec"
+    errors, commands = parse(
+        path,
+        [
+            "% ls",
+            "file",
+            f"<data/test_not_existent.spec",
+            "% ls",
+            "file",
+        ],
+    )
+
+    assert len(errors) == 1
+    assert "test_not_existent.spec does not exist" in errors[0].message
