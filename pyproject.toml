@@ -49,7 +49,7 @@ dependencies = [
 [tool.hatch.envs.default.scripts]
 cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=shellinspector --cov=tests {args}"
 no-cov = "cov --no-cov {args}"
-build-exe = "pyinstaller --onefile --noconfirm --name shellinspector.x86 src/shellinspector/__main__.py"
+build-exe = "pyinstaller --onefile --noconfirm --name shellinspector.amd64 src/shellinspector/__main__.py"
 
 [[tool.hatch.envs.test.matrix]]
 python = ["37", "38", "39", "310", "311"]
