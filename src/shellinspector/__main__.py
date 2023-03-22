@@ -62,10 +62,10 @@ def run_spec_file(runner, path, sshconfig):
     return runner.run(commands, sshconfig, context)
 
 
-def run(target_host, spec_files):
+def run(target_host, spec_files, ssh_key):
     sshconfig = get_ssh_config(target_host)
     success = True
-    runner = ShellRunner()
+    runner = ShellRunner(ssh_key)
 
     for spec_file in spec_files:
         event = None
@@ -84,6 +84,10 @@ def parse_args(argv=None):
     parser.add_argument(
         "--target-host",
         default="vagrant",
+    )
+    parser.add_argument(
+        "--ssh-key",
+        required=False,
     )
     parser.add_argument(
         "spec_files",
