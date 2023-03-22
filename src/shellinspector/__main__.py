@@ -10,10 +10,7 @@ from shellinspector.reporter import print_runner_event
 
 
 def get_vagrant_sshport():
-    inventory_file = (
-        Path(__file__).parent
-        / "../.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory"
-    )
+    inventory_file = ".vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory"
 
     if not inventory_file.exists():
         return None
