@@ -157,6 +157,11 @@ class ShellRunner:
                 session.sendline("exit")
                 assert session.prompt()
 
+    def set_environment(self, session, context):
+        for k, v in context.items():
+            session.sendline(f"export {k}='{shlex.quote(str(v))}'")
+            assert session.prompt()
+
     def run(self, commands, sshconfig, context):
         remote_session_key = (sshconfig["username"], sshconfig["server"], sshconfig["port"])
 
@@ -170,9 +175,7 @@ class ShellRunner:
                     session_key = remote_session_key
 
             with self._get_session(*session_key) as session:
-                for k, v in context.items():
-                    session.sendline(f"export {k}='{shlex.quote(str(v))}'")
-                    assert session.prompt()
+                self.set_environment(session, context)
 
                 session.sendline(cmd.command)
                 found_prompt = session.prompt()
