@@ -48,8 +48,7 @@ def run_spec_file(runner, path, sshconfig):
     errors, commands = parse(spec_file, lines)
 
     if errors:
-        print("parsing failed")
-        print("\n".join(errors))
+        print("\n".join(f"ERROR {e.source_file.name}:{e.source_line_no}:\n  {e.source_line}\n  {e.message}" for e in errors))
         return False
 
     return runner.run(commands, sshconfig)
