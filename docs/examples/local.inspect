@@ -1,0 +1,3 @@
+[@local]$ echo a
+a
+[@local]$ test -d $TMP
