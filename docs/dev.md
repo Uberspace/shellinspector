@@ -44,6 +44,7 @@ To release a version, follow these steps:
 export VERSION=0.2.0
 hatch version "${VERSION}"
 git add src/shellinspector/__about__.py
+git commit -m "v${VERSION}"
 git tag "v${VERSION}"
 git push origin main "v${VERSION}"
 ```
