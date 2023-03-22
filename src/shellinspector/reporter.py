@@ -8,10 +8,11 @@ from shellinspector.runner import RunnerEvent
 
 
 def print_with_prefix(prefix, text, color):
+    if not text:
+        prefix += " (none)"
     print(colored(prefix, "light_grey"))
     for line in text.splitlines():
         print(colored(f"{' ' * 3} {line.strip()}", color))
-
 
 def reset_line():
     if "TERM" in os.environ:
@@ -27,9 +28,9 @@ def print_runner_event(event, cmd, **kwargs):
     elif event == RunnerEvent.COMMAND_COMPLETED:
         reset_line()
     elif event == RunnerEvent.ERROR:
-        print(colored(f"EROR {cmd.line}", "red"))
-        print(colored(kwargs["message"], "red"))
-        print_with_prefix("output before giving up: ", kwargs["actual"], "red")
+        print(colored(f"ERR  {cmd.line}", "red"))
+        print(colored("  " + kwargs["message"], "red"))
+        print_with_prefix("  output before giving up:", kwargs["actual"], "red")
     elif event == RunnerEvent.COMMAND_PASSED:
         print(colored(f"PASS {cmd.line}", "green"))
     elif event == RunnerEvent.COMMAND_FAILED:
@@ -40,8 +41,5 @@ def print_runner_event(event, cmd, **kwargs):
             print(colored(f"    actual:   {kwargs['returncode']}", "light_grey"))
         if "output" in kwargs["reasons"]:
             print(colored(f"  output did not match", "red"))
-            print_with_prefix("    expected: ", cmd.expected, "light_grey")
-            if kwargs["actual"]:
-                print_with_prefix("    actual: ", kwargs["actual"], "white")
-            else:
-                print_with_prefix("    actual: (no output)", "", "white")
+            print_with_prefix("    expected:", cmd.expected, "light_grey")
+            print_with_prefix("    actual:", kwargs["actual"], "white")
