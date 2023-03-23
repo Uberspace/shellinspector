@@ -96,7 +96,9 @@ class RunnerEvent(enum.Enum):
 class ShellRunner:
     def __init__(self, ssh_key):
         self.sessions = {}
-        self.ssh_key = ssh_key
+        self.ssh_config = {
+            "ssh_key": ssh_key,
+        }
 
     @contextmanager
     def _get_session(self, username, server, port):
@@ -132,10 +134,10 @@ class ShellRunner:
                 session = self.sessions[key] = get_localshell()
             else:
                 sshconfig = {
+                    **self.ssh_config,
                     "username":username,
                     "server": server,
                     "port": port,
-                    "ssh_key": self.ssh_key,
                 }
                 LOGGER.debug("connecting via SSH: %s", sshconfig)
                 session = self.sessions[key] = get_ssh_session(sshconfig)
