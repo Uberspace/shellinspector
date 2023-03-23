@@ -200,6 +200,10 @@ class ShellRunner:
                             session_key[1],
                             session_key[2],
                         )
+                else:
+                    raise NotImplementedError(
+                        f"unknown host {cmd.host}, chose from: local, remote."
+                    )
 
             with self._get_session(*session_key) as session:
                 self.set_environment(session, context)
