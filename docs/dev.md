@@ -4,6 +4,7 @@
 
 1. [install hatch](https://hatch.pypa.io/latest/install/#pipx)
 2. run `hatch build` to get things running
+3. install pre-commit hooks: `hatch run pre-commit install --install-hooks`
 
 ## Running
 

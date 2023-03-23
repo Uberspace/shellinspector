@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier
+_commit: 2023.03.13
+_src_path: git@git.uberspace.is:templates/pre-commit.git
+ansible: false
+container: false
+package_name: ''
+prettier: true
+python: true
+python_extras: ''
+python_version: '3.10'
+shell: true
+typecheck: ''
+
