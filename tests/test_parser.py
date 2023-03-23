@@ -1,10 +1,10 @@
-from errno import EROFS
 from pathlib import Path
+
 import pytest
 
-from shellinspector.parser import parse
 from shellinspector.parser import AssertMode
 from shellinspector.parser import ExecutionMode
+from shellinspector.parser import parse
 
 
 def test_parse():
@@ -134,7 +134,6 @@ def test_user_reuse():
     assert commands[5].host == "somehost"
 
 
-
 def test_empty():
     errors, commands = parse("/dev/null", [])
     assert len(errors) == 0
@@ -170,11 +169,19 @@ def test_empty():
         ),
         (
             "[someuser@somehost]$ ls",
-            {"execution_mode": ExecutionMode.USER, "user": "someuser", "host": "somehost"},
+            {
+                "execution_mode": ExecutionMode.USER,
+                "user": "someuser",
+                "host": "somehost",
+            },
         ),
         (
             "[someuser@]$ ls",
-            {"execution_mode": ExecutionMode.USER, "user": "someuser", "host": "remote"},
+            {
+                "execution_mode": ExecutionMode.USER,
+                "user": "someuser",
+                "host": "remote",
+            },
         ),
         (
             "[@local]$ ls",
@@ -203,7 +210,7 @@ def test_include():
         [
             "% ls",
             "file",
-            f"<data/test.spec",
+            "<data/test.spec",
             "% ls",
             "file",
         ],
@@ -236,7 +243,7 @@ def test_include_missing_file():
         [
             "% ls",
             "file",
-            f"<data/test_not_existent.spec",
+            "<data/test_not_existent.spec",
             "% ls",
             "file",
         ],

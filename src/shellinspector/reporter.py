@@ -1,8 +1,7 @@
-from cmath import log
-import sys
-import os
-from pathlib import Path
 import logging
+import os
+import sys
+from pathlib import Path
 
 from termcolor import colored
 
@@ -10,12 +9,14 @@ from shellinspector.runner import RunnerEvent
 
 LOGGER = logging.getLogger(Path(__file__).name)
 
+
 def print_with_prefix(prefix, text, color):
     if not text:
         prefix += " (none)"
     print(colored(prefix, "light_grey"))
     for line in text.splitlines():
         print(colored(f"{' ' * 3} {line.strip()}", color))
+
 
 def reset_line():
     if "TERM" in os.environ:
@@ -44,10 +45,10 @@ def print_runner_event(event, cmd, **kwargs):
     elif event == RunnerEvent.COMMAND_FAILED:
         print(colored(f"FAIL {cmd.line}", "red"))
         if "returncode" in kwargs["reasons"]:
-            print(colored(f"  command failed", "red"))
+            print(colored("  command failed", "red"))
             print(colored("    expected: 0", "light_grey"))
             print(colored(f"    actual:   {kwargs['returncode']}", "light_grey"))
         if "output" in kwargs["reasons"]:
-            print(colored(f"  output did not match", "red"))
+            print(colored("  output did not match", "red"))
             print_with_prefix("    expected:", cmd.expected, "light_grey")
             print_with_prefix("    actual:", kwargs["actual"], "white")

@@ -1,8 +1,7 @@
 import re
-import logging
 from dataclasses import dataclass
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
 
 class ExecutionMode(Enum):
@@ -58,6 +57,7 @@ RE_PREFIX = re.compile(
     " "
 )
 
+
 def parse(path, lines):
     path = Path(path)
 
@@ -73,7 +73,14 @@ def parse(path, lines):
 
         # output before very first command
         if not prefix and not commands:
-            errors.append(Error(path, line_no, line, "syntax error: output before first command, missing prefix?"))
+            errors.append(
+                Error(
+                    path,
+                    line_no,
+                    line,
+                    "syntax error: output before first command, missing prefix?",
+                )
+            )
             continue
 
         # include
@@ -81,9 +88,18 @@ def parse(path, lines):
             include_path = (path.parent / line[1:]).resolve()
 
             if not include_path.exists():
-                errors.append(Error(path, line_no, line, f"include error: {include_path} does not exist"))
+                errors.append(
+                    Error(
+                        path,
+                        line_no,
+                        line,
+                        f"include error: {include_path} does not exist",
+                    )
+                )
             else:
-                include_errors, include_commands = parse(include_path, include_path.read_text().splitlines())
+                include_errors, include_commands = parse(
+                    include_path, include_path.read_text().splitlines()
+                )
                 errors.extend(include_errors)
                 commands.extend(include_commands)
 
@@ -97,29 +113,37 @@ def parse(path, lines):
             )
 
             execution_mode = ExecutionMode(execution_mode)
-            assert_mode = AssertMode(assert_mode if assert_mode else AssertMode.LITERAL.value)
+            assert_mode = AssertMode(
+                assert_mode if assert_mode else AssertMode.LITERAL.value
+            )
 
             if execution_mode == ExecutionMode.ROOT:
                 user = "root"
 
             try:
-                last_command = next(cmd for cmd in reversed(commands) if cmd.execution_mode == execution_mode)
+                last_command = next(
+                    cmd
+                    for cmd in reversed(commands)
+                    if cmd.execution_mode == execution_mode
+                )
                 user = user or last_command.user
                 host = host or last_command.host
             except (StopIteration, IndexError):
                 host = host or "remote"
 
-            commands.append(Command(
-                execution_mode,
-                command,
-                user,
-                host,
-                assert_mode,
-                "",
-                path,
-                line_no,
-                line,
-            ))
+            commands.append(
+                Command(
+                    execution_mode,
+                    command,
+                    user,
+                    host,
+                    assert_mode,
+                    "",
+                    path,
+                    line_no,
+                    line,
+                )
+            )
         else:
             # add output line to last command
             commands[-1].expected += line + "\n"

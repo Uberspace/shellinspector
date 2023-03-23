@@ -4,11 +4,10 @@ on:
   push:
     # don't run tests for release tags
     branches:
-      - '**'
+      - "**"
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:

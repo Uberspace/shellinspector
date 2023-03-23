@@ -5,14 +5,17 @@ import sys
 from pathlib import Path
 
 from shellinspector.parser import parse
-from shellinspector.runner import ShellRunner
-from shellinspector.runner import RunnerEvent
 from shellinspector.reporter import print_runner_event
+from shellinspector.runner import RunnerEvent
+from shellinspector.runner import ShellRunner
 
 LOGGER = logging.getLogger(Path(__file__).name)
 
+
 def get_vagrant_sshport():
-    inventory_file = Path(".vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory")
+    inventory_file = Path(
+        ".vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory"
+    )
 
     if not inventory_file.exists():
         return None
@@ -29,7 +32,7 @@ def get_ssh_config(target_host):
             "port": get_vagrant_sshport(),
         }
     else:
-        host, _, port = target_host.partition(':')
+        host, _, port = target_host.partition(":")
         return {
             "server": host,
             "username": "root",
@@ -56,7 +59,7 @@ def run_spec_file(runner, path, sshconfig):
                 error.source_file.name,
                 error.source_line_no,
                 error.source_line,
-                error.message
+                error.message,
             )
 
         return False
@@ -84,7 +87,7 @@ def run(target_host, spec_files, identity, verbose):
     for spec_file in spec_files:
         event = None
         run = run_spec_file(runner, spec_file, sshconfig)
-        
+
         if run is False:
             break
 
@@ -102,15 +105,17 @@ def parse_args(argv=None):
     parser.add_argument(
         "--target-host",
         default="vagrant",
-        help="remote host, format: hostname[:port], e.g. '127.0.0.1:22' or '127.0.0.1'"
+        help="remote host, format: hostname[:port], e.g. '127.0.0.1:22' or '127.0.0.1'",
     )
     parser.add_argument(
-        "--identity", "-i",
+        "--identity",
+        "-i",
         required=False,
-        help="path to a SSH private key to be used for authentication"
+        help="path to a SSH private key to be used for authentication",
     )
     parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
         default=False,
     )

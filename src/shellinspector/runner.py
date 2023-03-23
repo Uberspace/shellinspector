@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 
+import enum
+import logging
 import os
 import re
-import sys
-from pathlib import Path
-import logging
 import shlex
-import enum
+import sys
 from contextlib import contextmanager
+from pathlib import Path
 
 from pexpect import pxssh
 from pexpect import spawn
 from pexpect.pxssh import ExceptionPxssh
 
 from shellinspector.parser import AssertMode
-
 
 LOGGER = logging.getLogger(Path(__file__).name)
 
@@ -135,7 +134,7 @@ class ShellRunner:
             else:
                 sshconfig = {
                     **self.ssh_config,
-                    "username":username,
+                    "username": username,
                     "server": server,
                     "port": port,
                 }
@@ -180,7 +179,11 @@ class ShellRunner:
             assert session.prompt()
 
     def run(self, commands, sshconfig, context):
-        remote_session_key = (sshconfig["username"], sshconfig["server"], sshconfig["port"])
+        remote_session_key = (
+            sshconfig["username"],
+            sshconfig["server"],
+            sshconfig["port"],
+        )
 
         for cmd in commands:
             yield RunnerEvent.COMMAND_STARTING, cmd, {}
@@ -201,7 +204,10 @@ class ShellRunner:
                 yield RunnerEvent.COMMAND_COMPLETED, cmd, {}
 
                 if not found_prompt:
-                    yield RunnerEvent.ERROR, cmd, {"message": "could not find prompt for command", "actual": actual_output}
+                    yield RunnerEvent.ERROR, cmd, {
+                        "message": "could not find prompt for command",
+                        "actual": actual_output,
+                    }
                     session.close()
                     break
 
@@ -210,7 +216,10 @@ class ShellRunner:
                 actual_rc = session.before.decode().strip()
 
                 if not found_prompt:
-                    yield RunnerEvent.ERROR, cmd, {"message": "could not find prompt for return code", "actual": actual_rc}
+                    yield RunnerEvent.ERROR, cmd, {
+                        "message": "could not find prompt for return code",
+                        "actual": actual_rc,
+                    }
                     session.close()
                     break
 
@@ -219,14 +228,19 @@ class ShellRunner:
             if cmd.assert_mode == AssertMode.LITERAL:
                 output_matches = actual_output == cmd.expected.strip()
             elif cmd.assert_mode == AssertMode.REGEX:
-                output_matches = re.search(cmd.expected.strip(), actual_output, re.MULTILINE)
+                output_matches = re.search(
+                    cmd.expected.strip(), actual_output, re.MULTILINE
+                )
             elif cmd.assert_mode == AssertMode.IGNORE:
                 output_matches = True
             else:
                 raise NotImplementedError(f"Unknown assert_mode: {cmd.assert_mode}")
 
             if output_matches and returncode == 0:
-                yield RunnerEvent.COMMAND_PASSED, cmd, {"returncode": returncode, "actual": actual_output}
+                yield RunnerEvent.COMMAND_PASSED, cmd, {
+                    "returncode": returncode,
+                    "actual": actual_output,
+                }
             else:
                 reasons = []
 
@@ -235,7 +249,11 @@ class ShellRunner:
                 if not output_matches:
                     reasons.append("output")
 
-                yield RunnerEvent.COMMAND_FAILED, cmd, {"reasons": reasons, "returncode": returncode, "actual": actual_output}
+                yield RunnerEvent.COMMAND_FAILED, cmd, {
+                    "reasons": reasons,
+                    "returncode": returncode,
+                    "actual": actual_output,
+                }
                 break
         else:
             yield RunnerEvent.RUN_FAILED, None, {}

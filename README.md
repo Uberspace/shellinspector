@@ -21,9 +21,9 @@ $ python -m shellinspector readme.inspect
 running readme.console
 PASS [@local]$~ ping -c1 google.com
 FAIL [@local]$ whoami
-expected: 
+expected:
     shellinspector
-actual: 
+actual:
     luto
 ```
 
