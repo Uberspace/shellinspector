@@ -192,10 +192,14 @@ class ShellRunner:
                 if cmd.host == "local":
                     session_key = (None, "local", None)
                 elif cmd.host == "remote":
-                    session_key = remote_session_key.copy()
+                    session_key = remote_session_key
 
                     if cmd.user:
-                        session_key[0] = cmd.user
+                        session_key = (
+                            cmd.user,
+                            session_key[1],
+                            session_key[2],
+                        )
 
             with self._get_session(*session_key) as session:
                 self.set_environment(session, context)
