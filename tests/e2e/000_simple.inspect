@@ -1,0 +1,5 @@
+[test@remote]$ whoami
+test
+[test@remote]$ echo a
+a
+[test@remote]$ test -d $TMP

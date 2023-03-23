@@ -18,6 +18,8 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    container: ubuntu
+
     strategy:
       matrix:
         python-version:
@@ -26,16 +28,42 @@ jobs:
           - "3.10"
           - "3.11"
 
+    services:
+      openssh:
+        image: lscr.io/linuxserver/openssh-server:latest
+        env:
+          USER_NAME: test
+          # from tests/keys/id_ed25519.pub
+          PUBLIC_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZUxcZnBS+VeOhiYvjp46XSrDdwjdQzrXSCE+krNDQn
+        ports:
+          - 2222:2222
+
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install OS dependencies
+        run: |
+          apt -qq update
+          apt -qqy install sqlite ssh
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install hatch
+      - name: Setup SSH
+        run: |
+          echo 'Host *\nStrictHostKeyChecking no\n' >> /etc/ssh/ssh_config.d/ignore_host_keys.conf
+          chmod 0600 tests/keys/id_ed25519
       - name: Run tests
         run: |
           hatch run default:cov
+      - name: Run integration test
+        run: >
+          hatch run
+          shellinspector
+          --verbose
+          --target openssh:2222
+          --identity tests/keys/id_ed25519
+          tests/e2e/*.inspect
