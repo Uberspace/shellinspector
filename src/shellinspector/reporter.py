@@ -1,6 +1,5 @@
 import sys
 import os
-from turtle import color
 
 from termcolor import colored
 
