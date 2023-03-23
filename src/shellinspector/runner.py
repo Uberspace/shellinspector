@@ -2,6 +2,9 @@
 
 import os
 import re
+import sys
+from pathlib import Path
+import logging
 import shlex
 import enum
 from contextlib import contextmanager
@@ -11,6 +14,9 @@ from pexpect import spawn
 from pexpect.pxssh import ExceptionPxssh
 
 from shellinspector.parser import AssertMode
+
+
+LOGGER = logging.getLogger(Path(__file__).name)
 
 
 class localshell(pxssh.pxssh):
@@ -122,19 +128,26 @@ class ShellRunner:
         if key not in self.sessions:
             # connect, if there is no session
             if key[1] == "local":
+                LOGGER.debug("new local shell session")
                 session = self.sessions[key] = get_localshell()
             else:
-                session = self.sessions[key] = get_ssh_session(
-                    {
-                        "username":username,
-                        "server": server,
-                        "port": port,
-                        "ssh_key": self.ssh_key,
-                    },
-                )
+                sshconfig = {
+                    "username":username,
+                    "server": server,
+                    "port": port,
+                    "ssh_key": self.ssh_key,
+                }
+                LOGGER.debug("connecting via SSH: %s", sshconfig)
+                session = self.sessions[key] = get_ssh_session(sshconfig)
+
+            if logging.root.level == logging.DEBUG:
+                # use .buffer here, because pexpect wants to write bytes, not strs
+                session.logfile = sys.stdout.buffer
         else:
             # reuse, if we're already connected
             session = self.sessions[key]
+
+        LOGGER.debug("running in %s", key)
 
         # launch a child shell so we can easily reset the environment variables
         session.sendline("bash")

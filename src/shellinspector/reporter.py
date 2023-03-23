@@ -1,10 +1,14 @@
+from cmath import log
 import sys
 import os
+from pathlib import Path
+import logging
 
 from termcolor import colored
 
 from shellinspector.runner import RunnerEvent
 
+LOGGER = logging.getLogger(Path(__file__).name)
 
 def print_with_prefix(prefix, text, color):
     if not text:
@@ -22,10 +26,15 @@ def reset_line():
 
 def print_runner_event(event, cmd, **kwargs):
     if event == RunnerEvent.COMMAND_STARTING:
-        print(colored(f"RUN  {cmd.line}", "light_grey"), end="")
+        if logging.root.level > logging.DEBUG:
+            end = ""
+        else:
+            end = "\n"
+        print(colored(f"RUN  {cmd.line}", "light_grey"), end=end)
         sys.stdout.flush()
     elif event == RunnerEvent.COMMAND_COMPLETED:
-        reset_line()
+        if logging.root.level > logging.DEBUG:
+            reset_line()
     elif event == RunnerEvent.ERROR:
         print(colored(f"ERR  {cmd.line}", "red"))
         print(colored("  " + kwargs["message"], "red"))

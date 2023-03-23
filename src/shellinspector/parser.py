@@ -1,4 +1,5 @@
 import re
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from enum import Enum
@@ -26,6 +27,9 @@ class Command:
     source_file: Path
     source_line_no: int
     line: str
+
+    def short(self):
+        return f"{self.execution_mode.name}({self.user}@{self.host}) `{self.command}` (expect {len(self.expected)} lines, {self.assert_mode.name})"
 
 
 @dataclass

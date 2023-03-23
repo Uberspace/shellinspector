@@ -1,4 +1,5 @@
 import argparse
+import logging
 import re
 import sys
 from pathlib import Path
@@ -8,6 +9,7 @@ from shellinspector.runner import ShellRunner
 from shellinspector.runner import RunnerEvent
 from shellinspector.reporter import print_runner_event
 
+LOGGER = logging.getLogger(Path(__file__).name)
 
 def get_vagrant_sshport():
     inventory_file = Path(".vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory")
@@ -36,20 +38,31 @@ def get_ssh_config(target_host):
 
 
 def run_spec_file(runner, path, sshconfig):
-    print(f"running {path}")
+    LOGGER.info("handling %s", path)
 
     spec_file = Path(path).resolve()
 
     if not spec_file.exists():
-        print(f"file {spec_file} does not exist")
+        LOGGER.error("file %s does not exist", spec_file)
         return False
 
     lines = spec_file.read_text().splitlines()
     errors, commands = parse(spec_file, lines)
 
     if errors:
-        print("\n".join(f"ERROR {e.source_file.name}:{e.source_line_no}:\n  {e.source_line}\n  {e.message}" for e in errors))
+        for error in errors:
+            LOGGER.error(
+                "%s:%s: %s, %s",
+                error.source_file.name,
+                error.source_line_no,
+                error.source_line,
+                error.message
+            )
+
         return False
+
+    for i, command in enumerate(commands):
+        LOGGER.debug("command[%s]: %s", i, command.short())
 
     context = {
         "SI_TARGET": sshconfig["server"],
@@ -60,15 +73,22 @@ def run_spec_file(runner, path, sshconfig):
     return runner.run(commands, sshconfig, context)
 
 
-def run(target_host, spec_files, ssh_key):
+def run(target_host, spec_files, ssh_key, verbose):
     sshconfig = get_ssh_config(target_host)
-    success = True
+
+    LOGGER.debug("SSH config: %s", sshconfig)
+
     runner = ShellRunner(ssh_key)
+    success = True
 
     for spec_file in spec_files:
         event = None
+        run = run_spec_file(runner, spec_file, sshconfig)
+        
+        if run is False:
+            break
 
-        for event in run_spec_file(runner, spec_file, sshconfig):
+        for event in run:
             print_runner_event(event[0], event[1], **event[2])
 
         success = success & (event == RunnerEvent.RUN_SUCCEEDED)
@@ -89,6 +109,11 @@ def parse_args(argv=None):
         required=False,
     )
     parser.add_argument(
+        "--verbose", "-v",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "spec_files",
         nargs="+",
     )
@@ -100,6 +125,12 @@ def parse_args(argv=None):
 
 def main():
     args = parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    logging.debug("parsed args %s", args)
+
     return run(**vars(args))
 
 
