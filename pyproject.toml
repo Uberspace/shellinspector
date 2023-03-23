@@ -7,7 +7,7 @@ name = "shellinspector"
 description = ''
 readme = "README.md"
 requires-python = ">=3.7"
-license = "MIT"
+license = {text = "MIT License"}
 keywords = []
 authors = [
   { name = "uberspace.de", email = "hallo@uberspace.de" },
