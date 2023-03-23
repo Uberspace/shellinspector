@@ -73,12 +73,12 @@ def run_spec_file(runner, path, sshconfig):
     return runner.run(commands, sshconfig, context)
 
 
-def run(target_host, spec_files, ssh_key, verbose):
+def run(target_host, spec_files, identity, verbose):
     sshconfig = get_ssh_config(target_host)
 
     LOGGER.debug("SSH config: %s", sshconfig)
 
-    runner = ShellRunner(ssh_key)
+    runner = ShellRunner(identity)
     success = True
 
     for spec_file in spec_files:
@@ -105,8 +105,9 @@ def parse_args(argv=None):
         help="remote host, format: hostname[:port], e.g. '127.0.0.1:22' or '127.0.0.1'"
     )
     parser.add_argument(
-        "--ssh-key",
+        "--identity", "-i",
         required=False,
+        help="path to a SSH private key to be used for authentication"
     )
     parser.add_argument(
         "--verbose", "-v",

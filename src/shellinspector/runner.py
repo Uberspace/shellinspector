@@ -94,10 +94,10 @@ class RunnerEvent(enum.Enum):
 
 
 class ShellRunner:
-    def __init__(self, ssh_key):
+    def __init__(self, ssh_key_path):
         self.sessions = {}
         self.ssh_config = {
-            "ssh_key": ssh_key,
+            "ssh_key": ssh_key_path,
         }
 
     @contextmanager
