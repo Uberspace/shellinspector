@@ -40,7 +40,7 @@ def get_ssh_config(target_host):
         }
 
 
-def run_spec_file(runner, path, sshconfig):
+def run_spec_file(runner, path):
     LOGGER.info("handling %s", path)
 
     spec_file = Path(path).resolve()
@@ -67,26 +67,27 @@ def run_spec_file(runner, path, sshconfig):
     for i, command in enumerate(commands):
         LOGGER.debug("command[%s]: %s", i, command.short())
 
-    context = {
-        "SI_TARGET": sshconfig["server"],
-        "SI_TARGET_SSH_USERNAME": sshconfig["username"],
-        "SI_TARGET_SSH_PORT": sshconfig["port"],
-    }
-
-    return runner.run(commands, sshconfig, context)
+    return runner.run(commands)
 
 
 def run(target_host, spec_files, identity, verbose):
-    sshconfig = get_ssh_config(target_host)
+    ssh_config = get_ssh_config(target_host)
+    ssh_config["ssh_key"] = identity
 
-    LOGGER.debug("SSH config: %s", sshconfig)
+    context = {
+        "SI_TARGET": ssh_config["server"],
+        "SI_TARGET_SSH_USERNAME": ssh_config["username"],
+        "SI_TARGET_SSH_PORT": ssh_config["port"],
+    }
 
-    runner = ShellRunner(identity)
+    LOGGER.debug("SSH config: %s", ssh_config)
+
+    runner = ShellRunner(ssh_config, context)
     success = True
 
     for spec_file in spec_files:
         event = None
-        run = run_spec_file(runner, spec_file, sshconfig)
+        run = run_spec_file(runner, spec_file)
 
         if run is False:
             break

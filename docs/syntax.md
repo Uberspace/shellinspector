@@ -129,6 +129,21 @@ luto-portable
 usr1
 ```
 
+## Sessions
+
+You can connect to the test host more than once by adding `:session_name` to the
+username. Here we connect twice, change into two different directories and then
+check that the sessions are still separate:
+
+```
+[vagrant:session1@remote]$ cd photos
+[vagrant:session2@remote]$ cd videos
+[vagrant:session1@remote]$ pwd
+/home/vagrant/photos
+[vagrant:session2@remote]$ pwd
+/home/vagrant/videos
+```
+
 ## Return Codes
 
 Exit codes of all commands are checked automatically. If the code is >0, the

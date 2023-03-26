@@ -184,8 +184,26 @@ def test_empty():
             },
         ),
         (
+            "[someuser:sess1@]$ ls",
+            {
+                "execution_mode": ExecutionMode.USER,
+                "user": "someuser",
+                "host": "remote",
+                "session_name": "sess1",
+            },
+        ),
+        (
             "[@local]$ ls",
             {"execution_mode": ExecutionMode.USER, "user": None, "host": "local"},
+        ),
+        (
+            "[:sess1@local]$ ls",
+            {
+                "execution_mode": ExecutionMode.USER,
+                "user": None,
+                "host": "local",
+                "session_name": "sess1",
+            },
         ),
         (
             "[someuser@local]% ls",

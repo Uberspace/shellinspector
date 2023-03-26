@@ -20,6 +20,7 @@ class Command:
     execution_mode: ExecutionMode
     command: str
     user: str
+    session_name: str
     host: str
     assert_mode: AssertMode
     expected: str
@@ -47,6 +48,7 @@ RE_PREFIX = re.compile(
     # optional [user@host]
     r"(?:\["
     r"(?P<user>[a-z]+)?"
+    r"(?::(?P<session_name>[a-z0-9]+))?"
     r"@"
     r"(?P<host>[a-z]+)?"
     r"\])?"
@@ -108,8 +110,8 @@ def parse(path, lines):
         # start of command
         if prefix:
             command = line[prefix.span()[1] :]
-            user, host, execution_mode, assert_mode = prefix.group(
-                "user", "host", "execution_mode", "assert_mode"
+            user, session_name, host, execution_mode, assert_mode = prefix.group(
+                "user", "session_name", "host", "execution_mode", "assert_mode"
             )
 
             execution_mode = ExecutionMode(execution_mode)
@@ -136,6 +138,7 @@ def parse(path, lines):
                     execution_mode,
                     command,
                     user,
+                    session_name,
                     host,
                     assert_mode,
                     "",

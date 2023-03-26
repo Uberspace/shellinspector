@@ -1,0 +1,6 @@
+[:sess1@local]$ cd /tmp
+[:sess2@local]$ cd /
+[:sess1@local]$ pwd
+/tmp
+[:sess2@local]$ pwd
+/

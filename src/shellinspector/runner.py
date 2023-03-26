@@ -68,10 +68,10 @@ def disable_color():
         yield
 
 
-def get_ssh_session(sshconfig):
+def get_ssh_session(ssh_config):
     with disable_color():
         s = pxssh.pxssh(echo=False, timeout=5)
-        s.login(**sshconfig)
+        s.login(**ssh_config)
         return s
 
 
@@ -93,62 +93,67 @@ class RunnerEvent(enum.Enum):
 
 
 class ShellRunner:
-    def __init__(self, ssh_key_path):
+    def __init__(self, ssh_config, context):
         self.sessions = {}
-        self.ssh_config = {
-            "ssh_key": ssh_key_path,
-        }
+        self.ssh_config = ssh_config
+        self.context = context
 
     @contextmanager
-    def _get_session(self, username, server, port):
+    def _get_session(self, cmd):
         """
-        Create or reuse a shell session defined by key=(username, server, port).
+        Create or reuse a shell session used to run the given command.
 
-            with _get_session(username, server, port) as session:
+            with _get_session(cmd) as session:
                 session.sendline("echo a")
                 session.prompt()
                 assert session.before.decode() == "a"
 
-        If server is "local", this opens a shell session as the current user on
-        the current machine. Username and port are ignored. If server is
-        anything else, this uses the ssh(1) command to establish a connection.
+        If cmd.host is "local", this opens a shell session as the current user
+        on the current machine. Username and port are ignored. If server is
+        remote, this uses the ssh(1) command to establish a connection to the
+        server given in __init__.
 
-        It also makes sure that the environment is as clean as possible.
-        You can set environment variables freely.
+        It also makes sure that the environment is as clean as possible, so you
+        can use environment variables freely.
 
-        session is a `pexpect.pxssh.pxssh` object:
+        The yielded session object is a `pexpect.pxssh.pxssh`:
         https://pexpect.readthedocs.io/en/stable/api/pxssh.html#pxssh-class
         """
 
-        if server == "local":
+        if cmd.host == "local":
             # ignore username, if we're operating locally
-            key = (None, "local", None)
-        else:
-            key = (username, server, port)
+            key = ("local", cmd.session_name)
+        elif cmd.host == "remote":
+            key = (
+                self.ssh_config["server"],
+                self.ssh_config["port"],
+                cmd.user,
+                cmd.session_name,
+            )
 
         if key not in self.sessions:
             # connect, if there is no session
-            if key[1] == "local":
+            LOGGER.debug("creating session: %s", key)
+            if cmd.host == "local":
                 LOGGER.debug("new local shell session")
                 session = self.sessions[key] = get_localshell()
             else:
-                sshconfig = {
+                ssh_config = {
                     **self.ssh_config,
-                    "username": username,
-                    "server": server,
-                    "port": port,
+                    "username": cmd.user,
+                    "server": self.ssh_config["server"],
+                    "port": self.ssh_config["port"],
                 }
-                LOGGER.debug("connecting via SSH: %s", sshconfig)
-                session = self.sessions[key] = get_ssh_session(sshconfig)
+                LOGGER.debug("connecting via SSH: %s", ssh_config)
+                session = self.sessions[key] = get_ssh_session(ssh_config)
 
             if logging.root.level == logging.DEBUG:
                 # use .buffer here, because pexpect wants to write bytes, not strs
                 session.logfile = sys.stdout.buffer
         else:
             # reuse, if we're already connected
+            LOGGER.debug("reusing session: %s", key)
             session = self.sessions[key]
-
-        LOGGER.debug("running in %s", key)
 
         # launch a child shell so we can easily reset the environment variables
         session.sendline("bash")
@@ -178,35 +183,12 @@ class ShellRunner:
             session.sendline(f"export {k}='{shlex.quote(str(v))}'")
             assert session.prompt()
 
-    def run(self, commands, sshconfig, context):
-        remote_session_key = (
-            sshconfig["username"],
-            sshconfig["server"],
-            sshconfig["port"],
-        )
-
+    def run(self, commands):
         for cmd in commands:
             yield RunnerEvent.COMMAND_STARTING, cmd, {}
 
-            if cmd.user is not None or cmd.host is not None:
-                if cmd.host == "local":
-                    session_key = (None, "local", None)
-                elif cmd.host == "remote":
-                    session_key = remote_session_key
-
-                    if cmd.user:
-                        session_key = (
-                            cmd.user,
-                            session_key[1],
-                            session_key[2],
-                        )
-                else:
-                    raise NotImplementedError(
-                        f"unknown host {cmd.host}, chose from: local, remote."
-                    )
-
-            with self._get_session(*session_key) as session:
-                self.set_environment(session, context)
+            with self._get_session(cmd) as session:
+                self.set_environment(session, self.context)
 
                 session.sendline(cmd.command)
                 found_prompt = session.prompt()
