@@ -18,8 +18,30 @@ from shellinspector.parser import AssertMode
 LOGGER = logging.getLogger(Path(__file__).name)
 
 
-class localshell(pxssh.pxssh):
-    """allow to treat local shell sessons as ssh connections, so we can use the same code for both"""
+class RemoteShell(pxssh.pxssh):
+    def set_environment(self, context):
+        for k, v in context.items():
+            self.sendline(f"export {k}='{shlex.quote(str(v))}'")
+            assert self.prompt()
+
+    def push_state(self):
+        # launch a child shell so we can easily reset the environment variables
+        self.sendline("bash")
+
+        # new shell means new prompt, so reconfigure the prompt recognition
+        self.set_unique_prompt()
+        # trigger a fresh prompt so .prompt() is faster
+        self.sendline("")
+        assert self.prompt()
+
+    def pop_state(self):
+        if not self.closed:
+            self.sendline("exit")
+            assert self.prompt()
+
+
+class LocalShell(RemoteShell):
+    """Like RemoteShell/pxssh, but uses a local shell instead of a remote ssh one."""
 
     def __init__(self, *args, **kwargs):
         # ignoring the echoed commands doesn't seem to work for local commands
@@ -70,14 +92,14 @@ def disable_color():
 
 def get_ssh_session(ssh_config):
     with disable_color():
-        s = pxssh.pxssh(echo=False, timeout=5)
-        s.login(**ssh_config)
-        return s
+        shell = RemoteShell(echo=False, timeout=5)
+        shell.login(**ssh_config)
+        return shell
 
 
 def get_localshell():
     with disable_color():
-        shell = localshell(timeout=5)
+        shell = LocalShell(timeout=5)
         shell.login()
         return shell
 
@@ -98,15 +120,14 @@ class ShellRunner:
         self.ssh_config = ssh_config
         self.context = context
 
-    @contextmanager
     def _get_session(self, cmd):
         """
         Create or reuse a shell session used to run the given command.
 
-            with _get_session(cmd) as session:
-                session.sendline("echo a")
-                session.prompt()
-                assert session.before.decode() == "a"
+            session = _get_session(cmd)
+            session.sendline("echo a")
+            session.prompt()
+            assert session.before.decode() == "a"
 
         If cmd.host is "local", this opens a shell session as the current user
         on the current machine. Username and port are ignored. If server is
@@ -155,40 +176,21 @@ class ShellRunner:
             LOGGER.debug("reusing session: %s", key)
             session = self.sessions[key]
 
-        # launch a child shell so we can easily reset the environment variables
-        session.sendline("bash")
-
-        # new shell means new prompt, so reconfigure the prompt recognition
-        session.set_unique_prompt()
-        # trigger a fresh prompt so .prompt() is faster
-        session.sendline("")
-        assert session.prompt()
-
-        try:
-            # do the actual work on the caller's side
-            yield session
-        finally:
-            if session.closed:
-                # caller closed or crashed the session,
-                # forget it so it will be reinitialized if we need it again
-                del self.sessions[key]
-            else:
-                # session is still alive, exit the extra shell we started
-                # earlier to reset the environment variables
-                session.sendline("exit")
-                assert session.prompt()
-
-    def set_environment(self, session, context):
-        for k, v in context.items():
-            session.sendline(f"export {k}='{shlex.quote(str(v))}'")
-            assert session.prompt()
+        return session
 
     def run(self, commands):
-        for cmd in commands:
-            yield RunnerEvent.COMMAND_STARTING, cmd, {}
+        used_sessions = set()
 
-            with self._get_session(cmd) as session:
-                self.set_environment(session, self.context)
+        try:
+            for cmd in commands:
+                yield RunnerEvent.COMMAND_STARTING, cmd, {}
+
+                session = self._get_session(cmd)
+
+                if session not in used_sessions:
+                    used_sessions.add(session)
+                    session.set_environment(self.context)
+                    session.push_state()
 
                 session.sendline(cmd.command)
                 found_prompt = session.prompt()
@@ -218,38 +220,41 @@ class ShellRunner:
 
                 returncode = int(actual_rc)
 
-            if cmd.assert_mode == AssertMode.LITERAL:
-                output_matches = actual_output == cmd.expected.strip()
-            elif cmd.assert_mode == AssertMode.REGEX:
-                output_matches = re.search(
-                    cmd.expected.strip(), actual_output, re.MULTILINE
-                )
-            elif cmd.assert_mode == AssertMode.IGNORE:
-                output_matches = True
+                if cmd.assert_mode == AssertMode.LITERAL:
+                    output_matches = actual_output == cmd.expected.strip()
+                elif cmd.assert_mode == AssertMode.REGEX:
+                    output_matches = re.search(
+                        cmd.expected.strip(), actual_output, re.MULTILINE
+                    )
+                elif cmd.assert_mode == AssertMode.IGNORE:
+                    output_matches = True
+                else:
+                    raise NotImplementedError(f"Unknown assert_mode: {cmd.assert_mode}")
+
+                if output_matches and returncode == 0:
+                    yield RunnerEvent.COMMAND_PASSED, cmd, {
+                        "returncode": returncode,
+                        "actual": actual_output,
+                    }
+                else:
+                    reasons = []
+
+                    if returncode != 0:
+                        reasons.append("returncode")
+                    if not output_matches:
+                        reasons.append("output")
+
+                    yield RunnerEvent.COMMAND_FAILED, cmd, {
+                        "reasons": reasons,
+                        "returncode": returncode,
+                        "actual": actual_output,
+                    }
+                    break
             else:
-                raise NotImplementedError(f"Unknown assert_mode: {cmd.assert_mode}")
-
-            if output_matches and returncode == 0:
-                yield RunnerEvent.COMMAND_PASSED, cmd, {
-                    "returncode": returncode,
-                    "actual": actual_output,
-                }
-            else:
-                reasons = []
-
-                if returncode != 0:
-                    reasons.append("returncode")
-                if not output_matches:
-                    reasons.append("output")
-
-                yield RunnerEvent.COMMAND_FAILED, cmd, {
-                    "reasons": reasons,
-                    "returncode": returncode,
-                    "actual": actual_output,
-                }
-                break
-        else:
-            yield RunnerEvent.RUN_FAILED, None, {}
-            return
+                yield RunnerEvent.RUN_FAILED, None, {}
+                return
+        finally:
+            for session in used_sessions:
+                session.pop_state()
 
         yield RunnerEvent.RUN_SUCCEEDED, None, {}
