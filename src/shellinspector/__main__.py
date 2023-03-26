@@ -6,7 +6,6 @@ from pathlib import Path
 
 from shellinspector.parser import parse
 from shellinspector.reporter import print_runner_event
-from shellinspector.runner import RunnerEvent
 from shellinspector.runner import ShellRunner
 
 LOGGER = logging.getLogger(Path(__file__).name)
@@ -83,19 +82,11 @@ def run(target_host, spec_files, identity, verbose):
     LOGGER.debug("SSH config: %s", ssh_config)
 
     runner = ShellRunner(ssh_config, context)
+    runner.add_reporter(print_runner_event)
     success = True
 
     for spec_file in spec_files:
-        event = None
-        run = run_spec_file(runner, spec_file)
-
-        if run is False:
-            break
-
-        for event in run:
-            print_runner_event(event[0], event[1], **event[2])
-
-        success = success & (event == RunnerEvent.RUN_SUCCEEDED)
+        success = success & run_spec_file(runner, spec_file)
 
     return 0 if success else 1
 

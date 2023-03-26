@@ -117,6 +117,7 @@ class RunnerEvent(enum.Enum):
 class ShellRunner:
     def __init__(self, ssh_config, context):
         self.sessions = {}
+        self.reporters = []
         self.ssh_config = ssh_config
         self.context = context
 
@@ -143,7 +144,10 @@ class ShellRunner:
 
         if cmd.host == "local":
             # ignore username, if we're operating locally
-            key = ("local", cmd.session_name)
+            key = (
+                "local",
+                cmd.session_name,
+            )
         elif cmd.host == "remote":
             key = (
                 self.ssh_config["server"],
@@ -178,12 +182,95 @@ class ShellRunner:
 
         return session
 
+    def add_reporter(self, reporter):
+        self.reporters.append(reporter)
+
+    def report(self, event, cmd, kwargs):
+        for reporter in self.reporters:
+            reporter(event, cmd, **kwargs)
+
+    def _check_result(self, cmd, command_output, returncode):
+        if cmd.assert_mode == AssertMode.LITERAL:
+            output_matches = command_output == cmd.expected.strip()
+        elif cmd.assert_mode == AssertMode.REGEX:
+            output_matches = re.search(
+                cmd.expected.strip(), command_output, re.MULTILINE
+            )
+        elif cmd.assert_mode == AssertMode.IGNORE:
+            output_matches = True
+        else:
+            raise NotImplementedError(f"Unknown assert_mode: {cmd.assert_mode}")
+
+        if output_matches and returncode == 0:
+            self.report(
+                RunnerEvent.COMMAND_PASSED,
+                cmd,
+                {
+                    "returncode": returncode,
+                    "actual": command_output,
+                },
+            )
+
+            return True
+        else:
+            reasons = []
+
+            if returncode != 0:
+                reasons.append("returncode")
+            if not output_matches:
+                reasons.append("output")
+
+            self.report(
+                RunnerEvent.COMMAND_FAILED,
+                cmd,
+                {
+                    "reasons": reasons,
+                    "returncode": returncode,
+                    "actual": command_output,
+                },
+            )
+
+            return False
+
+    def _run_command(self, session, cmd):
+        def prompt(prompt_cause):
+            found_prompt = session.prompt()
+            actual_output = session.before.decode().strip()
+
+            if found_prompt:
+                return actual_output
+            else:
+                session.close()
+                self.report(
+                    RunnerEvent.ERROR,
+                    cmd,
+                    {
+                        "message": "could not find prompt for " + prompt_cause,
+                        "actual": actual_output,
+                    },
+                )
+                return False
+
+        session.sendline(cmd.command)
+
+        self.report(RunnerEvent.COMMAND_COMPLETED, cmd, {})
+
+        if (command_output := prompt("command")) is False:
+            return False
+
+        session.sendline("echo $?")
+
+        if (rc_output := prompt("return code")) is False:
+            return False
+
+        return self._check_result(cmd, command_output, int(rc_output))
+
     def run(self, commands):
         used_sessions = set()
 
         try:
             for cmd in commands:
-                yield RunnerEvent.COMMAND_STARTING, cmd, {}
+                self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
 
                 session = self._get_session(cmd)
 
@@ -192,69 +279,13 @@ class ShellRunner:
                     session.set_environment(self.context)
                     session.push_state()
 
-                session.sendline(cmd.command)
-                found_prompt = session.prompt()
-                actual_output = session.before.decode().strip()
-
-                yield RunnerEvent.COMMAND_COMPLETED, cmd, {}
-
-                if not found_prompt:
-                    yield RunnerEvent.ERROR, cmd, {
-                        "message": "could not find prompt for command",
-                        "actual": actual_output,
-                    }
-                    session.close()
-                    break
-
-                session.sendline("echo $?")
-                found_prompt = session.prompt()
-                actual_rc = session.before.decode().strip()
-
-                if not found_prompt:
-                    yield RunnerEvent.ERROR, cmd, {
-                        "message": "could not find prompt for return code",
-                        "actual": actual_rc,
-                    }
-                    session.close()
-                    break
-
-                returncode = int(actual_rc)
-
-                if cmd.assert_mode == AssertMode.LITERAL:
-                    output_matches = actual_output == cmd.expected.strip()
-                elif cmd.assert_mode == AssertMode.REGEX:
-                    output_matches = re.search(
-                        cmd.expected.strip(), actual_output, re.MULTILINE
-                    )
-                elif cmd.assert_mode == AssertMode.IGNORE:
-                    output_matches = True
-                else:
-                    raise NotImplementedError(f"Unknown assert_mode: {cmd.assert_mode}")
-
-                if output_matches and returncode == 0:
-                    yield RunnerEvent.COMMAND_PASSED, cmd, {
-                        "returncode": returncode,
-                        "actual": actual_output,
-                    }
-                else:
-                    reasons = []
-
-                    if returncode != 0:
-                        reasons.append("returncode")
-                    if not output_matches:
-                        reasons.append("output")
-
-                    yield RunnerEvent.COMMAND_FAILED, cmd, {
-                        "reasons": reasons,
-                        "returncode": returncode,
-                        "actual": actual_output,
-                    }
-                    break
-            else:
-                yield RunnerEvent.RUN_FAILED, None, {}
-                return
+                if not self._run_command(session, cmd):
+                    self.report(RunnerEvent.RUN_FAILED, None, {})
+                    return False
         finally:
             for session in used_sessions:
                 session.pop_state()
 
-        yield RunnerEvent.RUN_SUCCEEDED, None, {}
+        self.report(RunnerEvent.RUN_SUCCEEDED, None, {})
+
+        return True
