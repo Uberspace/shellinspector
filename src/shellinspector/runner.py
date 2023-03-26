@@ -231,7 +231,8 @@ class ShellRunner:
             return False
 
     def _run_command(self, session, cmd):
-        def prompt(prompt_cause):
+        def sendline(line, prompt_cause):
+            session.sendline(line)
             found_prompt = session.prompt()
             actual_output = session.before.decode()
             actual_output = actual_output.replace("\r\n", "\n")
@@ -250,16 +251,10 @@ class ShellRunner:
                 )
                 return False
 
-        session.sendline(cmd.command)
-
-        self.report(RunnerEvent.COMMAND_COMPLETED, cmd, {})
-
-        if (command_output := prompt("command")) is False:
+        if (command_output := sendline(cmd.command, "command")) is False:
             return False
 
-        session.sendline("echo $?")
-
-        if (rc_output := prompt("return code")) is False:
+        if (rc_output := sendline("echo $?", "return code")) is False:
             return False
 
         return self._check_result(cmd, command_output, int(rc_output))
