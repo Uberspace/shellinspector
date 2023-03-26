@@ -191,11 +191,9 @@ class ShellRunner:
 
     def _check_result(self, cmd, command_output, returncode):
         if cmd.assert_mode == AssertMode.LITERAL:
-            output_matches = command_output == cmd.expected.strip()
+            output_matches = command_output == cmd.expected
         elif cmd.assert_mode == AssertMode.REGEX:
-            output_matches = re.search(
-                cmd.expected.strip(), command_output, re.MULTILINE
-            )
+            output_matches = re.search(cmd.expected, command_output, re.MULTILINE)
         elif cmd.assert_mode == AssertMode.IGNORE:
             output_matches = True
         else:
@@ -235,7 +233,8 @@ class ShellRunner:
     def _run_command(self, session, cmd):
         def prompt(prompt_cause):
             found_prompt = session.prompt()
-            actual_output = session.before.decode().strip()
+            actual_output = session.before.decode()
+            actual_output = actual_output.replace("\r\n", "\n")
 
             if found_prompt:
                 return actual_output
