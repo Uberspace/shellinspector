@@ -30,13 +30,19 @@ jobs:
 
     services:
       openssh:
-        image: lscr.io/linuxserver/openssh-server:latest
-        env:
-          USER_NAME: test
-          # from tests/keys/id_ed25519.pub
-          PUBLIC_KEY: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZUxcZnBS+VeOhiYvjp46XSrDdwjdQzrXSCE+krNDQn
-        ports:
-          - 2222:2222
+        image: alpine:latest
+        options: >
+          --health-cmd "nc 127.0.0.1 22 | grep SSH-"
+          --health-interval 1s
+          --health-timeout 1s
+          alpine:latest
+          sh -c "
+          mkdir /root/.ssh &&
+          echo ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZUxcZnBS+VeOhiYvjp46XSrDdwjdQzrXSCE+krNDQn > /root/.ssh/authorized_keys &&
+          apk add --no-cache bash openssh &&
+          ssh-keygen -A &&
+          exec /usr/sbin/sshd -D -e
+          "
 
     steps:
       - uses: actions/checkout@v3
@@ -59,11 +65,12 @@ jobs:
       - name: Run tests
         run: |
           hatch run default:cov
+          ssh root@openssh -i tests/keys/id_ed25519 -v
       - name: Run integration test
         run: >
           hatch run
           shellinspector
           --verbose
-          --target openssh:2222
+          --target openssh
           --identity tests/keys/id_ed25519
           tests/e2e/*.inspect

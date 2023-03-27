@@ -1,5 +1,5 @@
-[test@remote]$ whoami
-test
-[test@remote]$ echo a
+% whoami
+root
+% echo a
 a
-[test@remote]$ test -d $TMP
+% test -d $TMP
