@@ -73,5 +73,7 @@ jobs:
           --target openssh
           --identity tests/keys/id_ed25519
           tests/e2e/*.inspect
+      - name: Check integration test result
+        run: |
           ssh root@openssh -i tests/keys/id_ed25519 grep TEST /home/test/testfile
           ssh root@openssh -i tests/keys/id_ed25519 grep TEST /root/testfile
