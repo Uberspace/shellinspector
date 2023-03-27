@@ -65,7 +65,6 @@ jobs:
       - name: Run tests
         run: |
           hatch run default:cov
-          ssh root@openssh -i tests/keys/id_ed25519 -v
       - name: Run integration test
         run: >
           hatch run
@@ -74,3 +73,5 @@ jobs:
           --target openssh
           --identity tests/keys/id_ed25519
           tests/e2e/*.inspect
+          ssh root@openssh -i tests/keys/id_ed25519 grep TEST /home/test/testfile
+          ssh root@openssh -i tests/keys/id_ed25519 grep TEST /root/testfile

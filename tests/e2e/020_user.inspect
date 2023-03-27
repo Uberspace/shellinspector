@@ -1,0 +1,4 @@
+[test@remote]$ whoami
+test
+[test@remote]$ echo TEST > /home/test/testfile
+[test@remote]$ test -d $HOME

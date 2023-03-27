@@ -1,0 +1,3 @@
+%_ useradd -m test
+%_ cp -r /root/.ssh ~test/
+%_ chown -R test:test ~test/.ssh

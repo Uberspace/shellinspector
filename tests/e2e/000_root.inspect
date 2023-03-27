@@ -1,0 +1,8 @@
+% whoami
+root
+[whoami@remote]% whoami
+root
+[whoami@remote]% echo TEST > /root/testfile
+% echo a
+a
+% test -d $TMP
