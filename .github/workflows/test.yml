@@ -40,7 +40,10 @@ jobs:
           python -m pip install hatch
       - name: Setup SSH
         run: |
-          echo 'Host *\nStrictHostKeyChecking no\n' >> /etc/ssh/ssh_config.d/ignore_host_keys.conf
+          mkdir ~/.ssh
+          echo 'Host *\nStrictHostKeyChecking no\n' >> ~/.ssh/config
+          chmod 0700 ~/.ssh
+          chmod 0600 ~/.ssh/config
           chmod 0600 tests/keys/id_ed25519
       - name: Run tests
         run: |
