@@ -50,25 +50,38 @@ def ssh_config(ssh_key_path):
 
 
 def test_disable_color():
-    assert os.environ["TERM"] != "dumb"
+    if "TERM" in os.environ:
+        old_term = os.environ["TERM"]
+        os.environ["TERM"] = "something"
+    else:
+        old_term = None
 
     with disable_color():
         assert os.environ["TERM"] == "dumb"
 
-    assert os.environ["TERM"] != "dumb"
+    if old_term is not None:
+        assert os.environ["TERM"] == "something"
+        os.environ["TERM"] = old_term
+    else:
+        assert old_term not in os.environ
 
 
 def test_disable_color_no_term():
-    old_term = os.environ["TERM"]
-    del os.environ["TERM"]
+    if "TERM" in os.environ:
+        old_term = os.environ["TERM"]
+        del os.environ["TERM"]
+    else:
+        old_term = None
+
     assert "TERM" not in os.environ
 
     with disable_color():
-        # doesn't crash
-        pass
+        assert "TERM" not in os.environ
 
     assert "TERM" not in os.environ
-    os.environ["TERM"] = old_term
+
+    if old_term is not None:
+        os.environ["TERM"] = old_term
 
 
 def test_localshell():
