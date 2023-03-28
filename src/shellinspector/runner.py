@@ -25,12 +25,16 @@ class RemoteShell(pxssh.pxssh):
         kwargs["echo"] = False
         super().__init__(*args, **kwargs)
 
+        self.push_depth = 0
+
     def set_environment(self, context):
         for k, v in context.items():
             self.sendline(f"export {k}='{shlex.quote(str(v))}'")
             assert self.prompt()
 
     def push_state(self):
+        self.push_depth += 1
+
         # launch a child shell so we can easily reset the environment variables
         self.sendline("bash")
 
@@ -40,10 +44,26 @@ class RemoteShell(pxssh.pxssh):
         self.sendline("")
         assert self.prompt()
 
+        self.sendline(f"export SHELLINSPECTOR_PROMPT_STATE={self.push_depth}")
+        assert self.prompt()
+
     def pop_state(self):
-        if not self.closed:
-            self.sendline("exit")
-            assert self.prompt()
+        if self.closed:
+            raise Exception("Session is closed")
+
+        self.sendline("echo $SHELLINSPECTOR_PROMPT_STATE")
+        assert self.prompt()
+        out = self.before.decode().strip()
+
+        if not out or int(out) != self.push_depth:
+            raise Exception(
+                "Test shell was exited, check if your test script contains an exit command"
+            )
+
+        self.sendline("exit")
+        assert self.prompt()
+
+        self.push_depth -= 1
 
 
 class LocalShell(RemoteShell):
