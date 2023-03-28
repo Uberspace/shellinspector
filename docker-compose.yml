@@ -17,3 +17,5 @@ services:
         - "nc 127.0.0.1 22 | grep SSH-"
       interval: 1s
       timeout: 1s
+    ports:
+      - "2222:22"

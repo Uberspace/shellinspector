@@ -18,7 +18,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    container: ubuntu
 
     strategy:
       matrix:
@@ -38,7 +37,7 @@ jobs:
       - name: Install OS dependencies
         run: |
           apt -qq update
-          apt -qqy install sqlite ssh
+          apt -qqy install sqlite
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
