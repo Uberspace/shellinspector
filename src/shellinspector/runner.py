@@ -211,12 +211,12 @@ class ShellRunner:
 
             return True
         else:
-            reasons = []
+            reasons = set()
 
             if returncode != 0:
-                reasons.append("returncode")
+                reasons.add("returncode")
             if not output_matches:
-                reasons.append("output")
+                reasons.add("output")
 
             self.report(
                 RunnerEvent.COMMAND_FAILED,
