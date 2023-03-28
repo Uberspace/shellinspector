@@ -407,6 +407,26 @@ def test_check_result(make_runner, cmd, args, expected_result, expected_events):
         assert events[i][1] == expected_events[i][1]
 
 
+def test_check_result_unknown_assert_mode(make_runner, ssh_config):
+    runner, events = make_runner(ssh_config)
+
+    cmd = Command(
+        ExecutionMode.USER,
+        "echo a",
+        None,
+        None,
+        "local",
+        "xxx",
+        "a",
+        "/some.spec",
+        1,
+        "$ echo a",
+    )
+
+    with pytest.raises(Exception, match="Unknown assert_mode: xxx.*"):
+        runner._check_result(cmd, "", 0)
+
+
 @pytest.mark.parametrize(
     "user,host,expected_class",
     (
