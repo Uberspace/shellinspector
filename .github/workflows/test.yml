@@ -54,7 +54,7 @@ jobs:
           hatch run
           shellinspector
           --verbose
-          --target openssh
+          --target 127.0.0.1:2222
           --identity tests/keys/id_ed25519
           tests/e2e/*.inspect
       - name: Check integration test result
