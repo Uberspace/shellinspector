@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from shellinspector.parser import AssertMode
+from shellinspector.parser import Command
 from shellinspector.parser import ExecutionMode
 from shellinspector.parser import parse
 
@@ -269,3 +270,19 @@ def test_include_missing_file():
 
     assert len(errors) == 1
     assert "test_not_existent.spec does not exist" in errors[0].message
+
+
+def test_command_short():
+    cmd = Command(
+        ExecutionMode.USER,
+        "echo a",
+        None,
+        None,
+        "local",
+        AssertMode.LITERAL,
+        "a",
+        "/some.spec",
+        1,
+        "$ echo a",
+    )
+    assert cmd.short() == "USER(None@local) `echo a` (expect 1 lines, LITERAL)"
