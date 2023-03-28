@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  openssh:
+    image: alpine:latest
+    command: >
+      sh -c "
+        mkdir /root/.ssh &&
+        echo ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZUxcZnBS+VeOhiYvjp46XSrDdwjdQzrXSCE+krNDQn > /root/.ssh/authorized_keys &&
+        apk add --no-cache bash openssh &&
+        ssh-keygen -A &&
+        exec /usr/sbin/sshd -D -e
+      "
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "nc 127.0.0.1 22 | grep SSH-"
+      interval: 1s
+      timeout: 1s

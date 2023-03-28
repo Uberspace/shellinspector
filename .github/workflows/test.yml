@@ -28,24 +28,11 @@ jobs:
           - "3.10"
           - "3.11"
 
-    services:
-      openssh:
-        image: alpine:latest
-        options: >
-          --health-cmd "nc 127.0.0.1 22 | grep SSH-"
-          --health-interval 1s
-          --health-timeout 1s
-          alpine:latest
-          sh -c "
-          mkdir /root/.ssh &&
-          echo ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZUxcZnBS+VeOhiYvjp46XSrDdwjdQzrXSCE+krNDQn > /root/.ssh/authorized_keys &&
-          apk add --no-cache bash openssh &&
-          ssh-keygen -A &&
-          exec /usr/sbin/sshd -D -e
-          "
-
     steps:
       - uses: actions/checkout@v3
+      - uses: isbang/compose-action@v1.4.1
+        with:
+          compose-file: "docker-compose.yml"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
