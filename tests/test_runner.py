@@ -25,13 +25,16 @@ def ssh_key_path():
 
 @pytest.fixture
 def make_runner():
-    def make_runner():
+    def make_runner(ssh_config=None, context=None):
+        ssh_config = ssh_config or {}
+        context = context or {}
+
         events = []
 
         def rep(*args, **kwargs):
             events.append((args, kwargs))
 
-        runner = ShellRunner({}, {})
+        runner = ShellRunner(ssh_config, context)
         runner.add_reporter(rep)
 
         return runner, events
@@ -218,7 +221,7 @@ def test_add_reporter():
 
 
 @pytest.fixture
-def command_local_echo():
+def command_local_echo_literal():
     return Command(
         ExecutionMode.USER,
         "echo a",
@@ -233,11 +236,44 @@ def command_local_echo():
     )
 
 
+@pytest.fixture
+def command_local_echo_regex():
+    return Command(
+        ExecutionMode.USER,
+        "echo aaa11aa",
+        None,
+        None,
+        "local",
+        AssertMode.REGEX,
+        ".*11.*",
+        "/some.spec",
+        1,
+        "$ echo a",
+    )
+
+
+@pytest.fixture
+def command_local_echo_ignore():
+    return Command(
+        ExecutionMode.USER,
+        "echo a",
+        None,
+        None,
+        "local",
+        AssertMode.IGNORE,
+        "a",
+        "/some.spec",
+        1,
+        "$ echo a",
+    )
+
+
 @pytest.mark.parametrize(
     "cmd,args,expected_result,expected_events",
     (
+        # LITERAL
         (
-            lazy_fixture("command_local_echo"),
+            lazy_fixture("command_local_echo_literal"),
             ["a", 0],
             True,
             [
@@ -250,8 +286,9 @@ def command_local_echo():
                 ),
             ],
         ),
+        # LITERAL & FAIL-Tests
         (
-            lazy_fixture("command_local_echo"),
+            lazy_fixture("command_local_echo_literal"),
             ["b", 0],
             False,
             [
@@ -266,7 +303,7 @@ def command_local_echo():
             ],
         ),
         (
-            lazy_fixture("command_local_echo"),
+            lazy_fixture("command_local_echo_literal"),
             ["a", 1],
             False,
             [
@@ -281,7 +318,7 @@ def command_local_echo():
             ],
         ),
         (
-            lazy_fixture("command_local_echo"),
+            lazy_fixture("command_local_echo_literal"),
             ["b", 1],
             False,
             [
@@ -291,6 +328,65 @@ def command_local_echo():
                         "returncode": 1,
                         "actual": "b",
                         "reasons": {"output", "returncode"},
+                    },
+                ),
+            ],
+        ),
+        # REGEX
+        (
+            lazy_fixture("command_local_echo_regex"),
+            ["aaa11aa", 0],
+            True,
+            [
+                (
+                    RunnerEvent.COMMAND_PASSED,
+                    {
+                        "returncode": 0,
+                        "actual": "aaa11aa",
+                    },
+                ),
+            ],
+        ),
+        (
+            lazy_fixture("command_local_echo_regex"),
+            ["b", 0],
+            False,
+            [
+                (
+                    RunnerEvent.COMMAND_FAILED,
+                    {
+                        "returncode": 0,
+                        "actual": "b",
+                        "reasons": {"output"},
+                    },
+                ),
+            ],
+        ),
+        # IGNORE
+        (
+            lazy_fixture("command_local_echo_ignore"),
+            ["aaa11aa", 0],
+            True,
+            [
+                (
+                    RunnerEvent.COMMAND_PASSED,
+                    {
+                        "returncode": 0,
+                        "actual": "aaa11aa",
+                    },
+                ),
+            ],
+        ),
+        (
+            lazy_fixture("command_local_echo_ignore"),
+            ["b", 0],
+            True,
+            [
+                (
+                    RunnerEvent.COMMAND_PASSED,
+                    {
+                        "returncode": 0,
+                        "actual": "b",
                     },
                 ),
             ],
@@ -309,3 +405,46 @@ def test_check_result(make_runner, cmd, args, expected_result, expected_events):
         assert events[i][0][0] == expected_events[i][0]
         assert events[i][0][1] == cmd
         assert events[i][1] == expected_events[i][1]
+
+
+@pytest.mark.parametrize(
+    "user,host,expected_class",
+    (
+        (None, "local", LocalShell),
+        ("root", "remote", RemoteShell),
+    ),
+)
+def test_get_session(make_runner, ssh_config, user, host, expected_class):
+    runner, events = make_runner(ssh_config)
+
+    cmd = Command(
+        ExecutionMode.USER,
+        "echo a",
+        user,
+        None,
+        host,
+        AssertMode.LITERAL,
+        "a",
+        "/some.spec",
+        1,
+        "$ echo a",
+    )
+
+    session1 = runner._get_session(cmd)
+
+    assert isinstance(session1, expected_class)
+
+    session1.sendline("echo a")
+    assert session1.prompt()
+    assert session1.before.decode().strip() == "a"
+
+    session2 = runner._get_session(cmd)
+    assert id(session1) == id(session2)
+
+    cmd.session_name = "a"
+
+    session3 = runner._get_session(cmd)
+    assert id(session1) != id(session3)
+
+    session4 = runner._get_session(cmd)
+    assert id(session3) == id(session4)
