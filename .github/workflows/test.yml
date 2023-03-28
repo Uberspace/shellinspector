@@ -30,6 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: isbang/compose-action@v1.4.1
+        with:
+          up-flags: "--wait"
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
