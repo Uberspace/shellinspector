@@ -66,7 +66,7 @@ def test_disable_color():
         assert os.environ["TERM"] == "something"
         os.environ["TERM"] = old_term
     else:
-        assert old_term not in os.environ
+        assert "TERM" not in os.environ
 
 
 def test_disable_color_no_term():
