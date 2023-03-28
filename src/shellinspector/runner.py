@@ -181,6 +181,8 @@ class ShellRunner:
                 cmd.user,
                 cmd.session_name,
             )
+        else:
+            raise NotImplementedError(f"Unknown host: {cmd.host}")
 
         if key not in self.sessions:
             # connect, if there is no session

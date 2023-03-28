@@ -448,3 +448,23 @@ def test_get_session(make_runner, ssh_config, user, host, expected_class):
 
     session4 = runner._get_session(cmd)
     assert id(session3) == id(session4)
+
+
+def test_get_session_unknown_host(make_runner, ssh_config):
+    runner, events = make_runner(ssh_config)
+
+    cmd = Command(
+        ExecutionMode.USER,
+        "echo a",
+        None,
+        None,
+        "xxx",
+        AssertMode.LITERAL,
+        "a",
+        "/some.spec",
+        1,
+        "$ echo a",
+    )
+
+    with pytest.raises(Exception, match="Unknown host: xxx.*"):
+        runner._get_session(cmd)
