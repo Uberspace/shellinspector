@@ -37,6 +37,26 @@ tests/test_parser.py ................. [100%]
 To get a coverage report in HTML add `--cov-report html` to the command and
 check `htmlcov/index.html`.
 
+## SSH-Server
+
+Use `docker-compose` to start a local SSH server on port `2222` with root access
+using the `tests/keys/id_ed25519` key.
+
+```
+$ docker-compose up -d
+```
+
+Then, use `--target` and `--identity` to run tests:
+
+```
+$ hatch run python -m shellinspector tests/e2e/* --target 127.0.0.1:2222 --identity tests/keys/id_ed25519
+PASS % whoami
+PASS [whoami@remote]% whoami
+PASS [whoami@remote]% echo TEST > /root/testfile
+PASS % echo a
+(...)
+```
+
 ## Releasing a new version
 
 To release a version, follow these steps:
