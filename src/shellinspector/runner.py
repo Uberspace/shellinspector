@@ -19,6 +19,12 @@ LOGGER = logging.getLogger(Path(__file__).name)
 
 
 class RemoteShell(pxssh.pxssh):
+    def __init__(self, *args, **kwargs):
+        # ignoring the echoed commands doesn't seem to work for local commands
+        # just disabling echo is easier than debugging this.
+        kwargs["echo"] = False
+        super().__init__(*args, **kwargs)
+
     def set_environment(self, context):
         for k, v in context.items():
             self.sendline(f"export {k}='{shlex.quote(str(v))}'")
@@ -42,12 +48,6 @@ class RemoteShell(pxssh.pxssh):
 
 class LocalShell(RemoteShell):
     """Like RemoteShell/pxssh, but uses a local shell instead of a remote ssh one."""
-
-    def __init__(self, *args, **kwargs):
-        # ignoring the echoed commands doesn't seem to work for local commands
-        # just disabling echo is easier than debugging this.
-        kwargs["echo"] = False
-        super().__init__(*args, **kwargs)
 
     def login(
         self,
@@ -92,7 +92,7 @@ def disable_color():
 
 def get_ssh_session(ssh_config):
     with disable_color():
-        shell = RemoteShell(echo=False, timeout=5)
+        shell = RemoteShell(timeout=5)
         shell.login(**ssh_config)
         return shell
 
