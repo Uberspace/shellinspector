@@ -76,7 +76,7 @@ def test_disable_color_no_term():
     assert "TERM" not in os.environ
 
     with disable_color():
-        assert "TERM" not in os.environ
+        assert os.environ["TERM"] == "dumb"
 
     assert "TERM" not in os.environ
 

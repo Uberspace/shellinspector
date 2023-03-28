@@ -103,11 +103,17 @@ class LocalShell(RemoteShell):
 def disable_color():
     if "TERM" in os.environ:
         old_term = os.environ["TERM"]
-        os.environ["TERM"] = "dumb"  # disable any color ouput in SSH
-        yield
+    else:
+        old_term = None
+
+    os.environ["TERM"] = "dumb"  # disable any color ouput in SSH
+
+    yield
+
+    if old_term is not None:
         os.environ["TERM"] = old_term
     else:
-        yield
+        del os.environ["TERM"]
 
 
 def get_ssh_session(ssh_config):
