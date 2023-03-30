@@ -1,0 +1,3 @@
+[@local]$ export A=somevalue
+[@local]$ echo $A
+somevalue

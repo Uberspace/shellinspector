@@ -1,0 +1,3 @@
+[@local]$ echo $A
+
+[@local]$ true
