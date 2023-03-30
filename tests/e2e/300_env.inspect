@@ -1,0 +1,6 @@
+[@local]$ echo $SI_TARGET
+127.0.0.1
+[@local]$ echo $SI_TARGET_SSH_PORT
+2222
+[@local]$ echo $SI_TARGET_SSH_USERNAME
+root
