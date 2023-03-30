@@ -488,3 +488,97 @@ def test_get_session_unknown_host(make_runner, ssh_config):
 
     with pytest.raises(Exception, match="Unknown host: xxx.*"):
         runner._get_session(cmd)
+
+
+class FakeSession:
+    def __init__(self, prompt_works, before):
+        self._prompt_works = prompt_works
+        self._before = before
+        self._lines = []
+        self._closed = False
+
+    def sendline(self, line):
+        self._lines.append(line)
+
+    def prompt(self):
+        if not self._before:
+            raise Exception(
+                "Ran out of before outputs, provide more. Lines so far: "
+                + ",".join(self._lines)
+            )
+        self.before = self._before.pop(0)
+        return self._prompt_works.pop(0)
+
+    def close(self):
+        self._closed = True
+
+    def push_state(self):
+        pass
+
+    def pop_state(self):
+        pass
+
+    def set_environment(self, env):
+        pass
+
+
+@pytest.mark.parametrize(
+    "prompt_works,actual_output,expected_result,expected_events",
+    (
+        (
+            [True, True],
+            [b"a", b"0"],
+            True,
+            [
+                (RunnerEvent.COMMAND_PASSED, {"returncode": 0, "actual": "a"}),
+            ],
+        ),
+        (
+            [False, True],
+            [b"a", b"0"],
+            False,
+            [
+                (
+                    RunnerEvent.ERROR,
+                    {"message": "could not find prompt for command", "actual": "a"},
+                ),
+            ],
+        ),
+        (
+            [True, False],
+            [b"a", b"0"],
+            False,
+            [
+                (
+                    RunnerEvent.ERROR,
+                    {"message": "could not find prompt for return code", "actual": "0"},
+                )
+            ],
+        ),
+    ),
+)
+def test_run_command(
+    make_runner,
+    command_local_echo_literal,
+    prompt_works,
+    actual_output,
+    expected_result,
+    expected_events,
+):
+    session = FakeSession(prompt_works, actual_output)
+    runner, events = make_runner()
+    result = runner._run_command(session, command_local_echo_literal)
+    assert result == expected_result, events
+
+    assert len(events) == len(expected_events)
+
+    for i in range(len(events)):
+        assert events[i][0][0] == expected_events[i][0]
+        assert events[i][0][1] == command_local_echo_literal
+        assert events[i][1] == expected_events[i][1]
+
+
+def test_run(make_runner, command_local_echo_literal):
+    runner, events = make_runner()
+    runner._get_session = lambda cmd: FakeSession([True, True], [b"", b"0"])
+    runner.run([command_local_echo_literal])
