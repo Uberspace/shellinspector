@@ -60,3 +60,4 @@ jobs:
         run: |
           ssh root@127.0.0.1 -p 2222 -i tests/keys/id_ed25519 grep TEST /home/test/testfile
           ssh root@127.0.0.1 -p 2222 -i tests/keys/id_ed25519 grep TEST /root/testfile
+          grep TEST /tmp/testfile

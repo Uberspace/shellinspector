@@ -1,0 +1,4 @@
+[@local]$ test -d $TMP
+[@local]$ echo 123
+123
+[@local]$ echo TEST > /tmp/testfile
