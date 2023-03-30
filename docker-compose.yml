@@ -5,7 +5,7 @@ services:
     image: alpine:latest
     command: >
       sh -c "
-        mkdir /root/.ssh &&
+        mkdir -p /root/.ssh &&
         echo ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZUxcZnBS+VeOhiYvjp46XSrDdwjdQzrXSCE+krNDQn > /root/.ssh/authorized_keys &&
         apk add --no-cache bash openssh &&
         ssh-keygen -A &&
