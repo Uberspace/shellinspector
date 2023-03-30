@@ -578,7 +578,60 @@ def test_run_command(
         assert events[i][1] == expected_events[i][1]
 
 
-def test_run(make_runner, command_local_echo_literal):
+@pytest.mark.parametrize(
+    "prompt_works,actual_output,expected_result,expected_events",
+    (
+        (
+            [True, True],
+            [b"a", b"0"],
+            True,
+            [
+                (RunnerEvent.COMMAND_STARTING, "echo a", {}),
+                (
+                    RunnerEvent.COMMAND_PASSED,
+                    "echo a",
+                    {"returncode": 0, "actual": "a"},
+                ),
+                (RunnerEvent.RUN_SUCCEEDED, None, {}),
+            ],
+        ),
+        (
+            [True, True],
+            [b"a", b"1"],
+            False,
+            [
+                (RunnerEvent.COMMAND_STARTING, "echo a", {}),
+                (
+                    RunnerEvent.COMMAND_FAILED,
+                    "echo a",
+                    {"returncode": 1, "actual": "a", "reasons": {"returncode"}},
+                ),
+                (RunnerEvent.RUN_FAILED, None, {}),
+            ],
+        ),
+    ),
+)
+def test_run1(
+    make_runner,
+    command_local_echo_literal,
+    prompt_works,
+    actual_output,
+    expected_result,
+    expected_events,
+):
     runner, events = make_runner()
-    runner._get_session = lambda cmd: FakeSession([True, True], [b"", b"0"])
-    runner.run([command_local_echo_literal])
+    session = FakeSession(prompt_works, actual_output)
+    runner._get_session = lambda cmd: session
+
+    result = runner.run([command_local_echo_literal])
+    assert result == expected_result, events
+
+    assert len(events) == len(expected_events)
+
+    for i in range(len(events)):
+        assert events[i][0][0] == expected_events[i][0]
+        if expected_events[i][1] is None:
+            assert events[i][0][1] is None
+        else:
+            assert events[i][0][1].command == expected_events[i][1]
+        assert events[i][1] == expected_events[i][2]
