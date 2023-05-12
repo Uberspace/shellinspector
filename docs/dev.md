@@ -59,15 +59,19 @@ PASS % echo a
 
 ## Releasing a new version
 
-To release a version, follow these steps:
+To release a version, first bump the version (`patch`, `minor`, `major`):
 
 ```
-export VERSION=0.2.0
-hatch version "${VERSION}"
+hatch version minor
+```
+
+Then share it with the world:
+
+```
 git add src/shellinspector/__about__.py
-git commit -m "v${VERSION}"
-git tag "v${VERSION}"
-git push origin main "v${VERSION}"
+git commit -m "v$(hatch version)"
+git tag "v$(hatch version)"
+git push origin main "v$(hatch version)"
 ```
 
-Adhere to [semver](https://semver.org/) choose the new version number.
+Adhere to [semver](https://semver.org/) to choose the new version number.
