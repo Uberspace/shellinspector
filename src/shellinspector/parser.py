@@ -28,8 +28,17 @@ class Command:
     source_line_no: int
     line: str
 
+    @property
+    def line_count(self):
+        # TODO: replace this with .removesuffix("\n").count("\n")+1 once we drop py3.7
+        count = self.expected.count("\n")
+        if self.expected and self.expected[-1] != "\n":
+            count += 1
+        return count
+
+    @property
     def short(self):
-        return f"{self.execution_mode.name}({self.user}@{self.host}) `{self.command}` (expect {len(self.expected)} lines, {self.assert_mode.name})"
+        return f"{self.execution_mode.name}({self.user}@{self.host}) `{self.command}` (expect {self.line_count} lines, {self.assert_mode.name})"
 
 
 @dataclass

@@ -308,7 +308,7 @@ def test_include_missing_file():
     assert "test_not_existent.spec does not exist" in errors[0].message
 
 
-def test_command_short():
+def test_command_short_literal():
     cmd = Command(
         ExecutionMode.USER,
         "echo a",
@@ -316,9 +316,25 @@ def test_command_short():
         None,
         "local",
         AssertMode.LITERAL,
-        "a",
+        "a\nb\n",
         "/some.spec",
         1,
-        "$ echo a",
+        "$ echo a\nb",
     )
-    assert cmd.short() == "USER(None@local) `echo a` (expect 1 lines, LITERAL)"
+    assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, LITERAL)"
+
+
+def test_command_short_regex():
+    cmd = Command(
+        ExecutionMode.USER,
+        "echo a",
+        None,
+        None,
+        "local",
+        AssertMode.REGEX,
+        "a\nb",
+        "/some.spec",
+        1,
+        "$ echo a\nb",
+    )
+    assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, REGEX)"

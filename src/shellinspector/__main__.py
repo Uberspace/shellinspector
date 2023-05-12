@@ -64,7 +64,7 @@ def run_spec_file(runner, path):
         return False
 
     for i, command in enumerate(commands):
-        LOGGER.debug("command[%s]: %s", i, command.short())
+        LOGGER.debug("command[%s]: %s", i, command.short)
 
     return runner.run(commands)
 
