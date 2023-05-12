@@ -53,7 +53,7 @@ no-cov = "cov --no-cov {args}"
 build-exe = "pyinstaller --onefile --noconfirm --name shellinspector.amd64 src/shellinspector/__main__.py"
 
 [[tool.hatch.envs.test.matrix]]
-python = ["37", "38", "39", "310", "311"]
+python = ["38", "39", "310", "311"]
 
 [tool.coverage.run]
 branch = true
