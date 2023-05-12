@@ -57,6 +57,14 @@ root:x:0:0:root:/root:/bin/bash
 bin:x:1:1:bin:/bin:/usr/bin/nologin
 ```
 
+Note that there is always a final new line after the expected output, so this
+will currently always fail:
+
+```
+$ echo -n a
+a
+```
+
 ##### Regex Match
 
 Interpret the specified output as a regex with `re.MULTILINE` and try to match
@@ -73,6 +81,14 @@ $~ whoami
 
 Keep in mind that `\A` and `\Z` (not `^` and `$`) are needed to match start and
 end of the regex.
+
+New lines are only preserved between lines, but not after the final one.
+Otherwise this would never match, since `r"aaaa\n"` can't match `aaaa`.
+
+```
+$~ echo aaaab
+aaaa
+```
 
 ##### Ignore
 

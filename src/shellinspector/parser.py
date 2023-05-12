@@ -151,4 +151,9 @@ def parse(path, lines):
             # add output line to last command
             commands[-1].expected += line + "\n"
 
+    for cmd in commands:
+        if cmd.assert_mode == AssertMode.REGEX:
+            # remove trailing new lines for regexes, see syntax.md
+            cmd.expected = cmd.expected.rstrip("\n")
+
     return (errors, commands)

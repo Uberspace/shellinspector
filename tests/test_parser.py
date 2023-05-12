@@ -46,6 +46,42 @@ def test_parse():
     assert commands[2].source_line_no == 8
 
 
+def test_parse_whitespace_literal():
+    errors, commands = parse(
+        "/dev/null",
+        [
+            "$ echo ab",
+            "a",
+            "b",
+        ],
+    )
+
+    assert len(errors) == 0
+    assert len(commands) == 1
+
+    assert commands[0].expected == "a\nb\n"
+
+
+def test_parse_whitespace_regex():
+    errors, commands = parse(
+        "/dev/null",
+        [
+            "%~ /usr/bin/which --help",
+            "Usage: /usr/bin/which [options] [--] COMMAND [...]",
+            "Write the full path of COMMAND",
+        ],
+    )
+
+    assert len(errors) == 0
+    assert len(commands) == 1
+
+    # no trailing newline at the end because this confuses the regex
+    assert (
+        commands[0].expected
+        == "Usage: /usr/bin/which [options] [--] COMMAND [...]\nWrite the full path of COMMAND"
+    )
+
+
 def test_parse_error():
     path = Path(__file__).parent / "virtual.spec"
     errors, commands = parse(
