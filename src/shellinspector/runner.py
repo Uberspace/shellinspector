@@ -147,6 +147,32 @@ class ShellRunner:
         self.ssh_config = ssh_config
         self.context = context
 
+    def _get_session_key(self, cmd):
+        if cmd.host == "local":
+            # ignore username, if we're operating locally
+            return (
+                "local",
+                cmd.session_name,
+            )
+        elif cmd.host == "remote":
+            return (
+                self.ssh_config["server"],
+                self.ssh_config["port"],
+                cmd.user,
+                cmd.session_name,
+            )
+        else:
+            raise NotImplementedError(f"Unknown host: {cmd.host}")
+
+    def _close_session(self, cmd):
+        key = self._get_session_key(cmd)
+
+        if key in self.sessions:
+            self.sessions[key].close()
+            del self.sessions[key]
+        else:
+            raise Exception(f"Could not find session for {cmd}.")
+
     def _get_session(self, cmd):
         """
         Create or reuse a shell session used to run the given command.
@@ -168,21 +194,7 @@ class ShellRunner:
         https://pexpect.readthedocs.io/en/stable/api/pxssh.html#pxssh-class
         """
 
-        if cmd.host == "local":
-            # ignore username, if we're operating locally
-            key = (
-                "local",
-                cmd.session_name,
-            )
-        elif cmd.host == "remote":
-            key = (
-                self.ssh_config["server"],
-                self.ssh_config["port"],
-                cmd.user,
-                cmd.session_name,
-            )
-        else:
-            raise NotImplementedError(f"Unknown host: {cmd.host}")
+        key = self._get_session_key(cmd)
 
         if key not in self.sessions:
             # connect, if there is no session
@@ -295,6 +307,16 @@ class ShellRunner:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
 
                 session = self._get_session(cmd)
+
+                if cmd.command == "logout":
+                    self._close_session(cmd)
+                    used_sessions.remove(session)
+                    self.report(
+                        RunnerEvent.COMMAND_PASSED,
+                        cmd,
+                        {"returncode": 0, "actual": ""},
+                    )
+                    continue
 
                 if session not in used_sessions:
                     used_sessions.add(session)

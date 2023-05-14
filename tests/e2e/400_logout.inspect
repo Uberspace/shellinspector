@@ -1,0 +1,5 @@
+[@local]$ echo a
+a
+[@local]$ logout
+[@local]$ echo b
+b

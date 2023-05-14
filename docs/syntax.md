@@ -160,6 +160,19 @@ check that the sessions are still separate:
 /home/vagrant/videos
 ```
 
+## Logout
+
+Use the `logout` command to terminate a session. If you use the same
+user/session-name/host again, a new one will start automatically.
+
+```
+[@local]$ echo a
+a
+[@local]$ logout
+[@local]$ echo b
+b
+```
+
 ## Return Codes
 
 Exit codes of all commands are checked automatically. If the code is >0, the

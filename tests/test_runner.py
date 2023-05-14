@@ -490,6 +490,51 @@ def test_get_session_unknown_host(make_runner, ssh_config):
         runner._get_session(cmd)
 
 
+def test_logout(make_runner, ssh_config):
+    runner, events = make_runner(ssh_config)
+
+    cmds = [
+        Command(
+            ExecutionMode.ROOT,
+            "echo a",
+            "root",
+            None,
+            "remote",
+            AssertMode.LITERAL,
+            "a\n",
+            "/some.spec",
+            1,
+            "$ echo a",
+        ),
+        Command(
+            ExecutionMode.ROOT,
+            "logout",
+            "root",
+            None,
+            "remote",
+            AssertMode.LITERAL,
+            "",
+            "/some.spec",
+            1,
+            "$ echo a",
+        ),
+        Command(
+            ExecutionMode.ROOT,
+            "echo b",
+            "root",
+            None,
+            "remote",
+            AssertMode.LITERAL,
+            "b\n",
+            "/some.spec",
+            1,
+            "$ echo a",
+        ),
+    ]
+
+    runner.run(cmds)
+
+
 class FakeSession:
     def __init__(self, prompt_works, before):
         self._prompt_works = prompt_works
