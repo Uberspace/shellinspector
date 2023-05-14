@@ -168,10 +168,13 @@ class ShellRunner:
         key = self._get_session_key(cmd)
 
         if key in self.sessions:
+            LOGGER.debug("closing session: %s", key)
             self.sessions[key].close()
             del self.sessions[key]
         else:
-            raise Exception(f"Could not find session for {cmd}.")
+            raise Exception(
+                f"Session could not be closed, because it doesn't exist, command: {cmd}"
+            )
 
     def _get_session(self, cmd):
         """
