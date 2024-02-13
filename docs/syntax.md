@@ -210,6 +210,26 @@ $ echo $DNS_SERVER
 DNS_SERVER=1.1.1.1
 ```
 
+## Parametrized tests
+
+To run many similar tests, create a file called `test.ispec.examples` next to
+`test.ispec`:
+
+`test.ispec`:
+
+```
+$~ {PY_EXE} --version
+{PY_VERSION}
+```
+
+`test.ispec.examples`
+
+```
+PY_EXE        PY_VERSION
+python3.10    3.10
+python3.11    3.11
+```
+
 ## Examples
 
 ```

@@ -1,0 +1,2 @@
+[@local]$ echo Python {PY_COMMAND} --version | grep -Po '[0-9.]+'
+{PY_VERSION}

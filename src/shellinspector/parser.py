@@ -1,5 +1,6 @@
 import re
 from dataclasses import dataclass
+from dataclasses import replace
 from enum import Enum
 from pathlib import Path
 
@@ -55,12 +56,38 @@ class Specfile:
     commands: list[Command]
     errors: list[Error]
     environment: dict[str, str]
+    examples: list[dict[str, str]]
+    applied_example: dict
 
-    def __init__(self, path, commands=None, errors=None, environment=None):
+    def __init__(
+        self, path, commands=None, errors=None, environment=None, examples=None
+    ):
         self.path = Path(path)
         self.commands = commands or []
         self.errors = errors or []
         self.environment = environment or {}
+        self.examples = examples or []
+        self.applied_example = None
+
+    def copy(self):
+        return Specfile(
+            self.path,
+            [replace(c) for c in self.commands],
+            [replace(e) for e in self.errors],
+            self.environment.copy(),
+            [e.copy() for e in self.examples],
+        )
+
+    def as_example(self, example):
+        copy = self.copy()
+        copy.applied_example = example
+
+        for cmd in copy.commands:
+            cmd.command = cmd.command.format(**example)
+            cmd.line = cmd.line.format(**example)
+            cmd.expected = cmd.expected.format(**example)
+
+        return copy
 
 
 # parse a line like
@@ -89,12 +116,12 @@ def parse_env(path, lines: list[str]):
 
     for line_no, line in enumerate(lines, 1):
         try:
+            if line.startswith("#") or not line.strip():
+                continue
+
             k, _, v = line.partition("=")
             k = k.strip()
             v = v.strip()
-
-            if k.startswith("#"):
-                continue
 
             if not v:
                 errors.append(
@@ -121,13 +148,68 @@ def parse_env(path, lines: list[str]):
     return environment, errors
 
 
+def parse_examples(path, lines: list[str]):
+    errors = []
+    keys = None
+    examples = []
+
+    if len(lines) <= 1:
+        return examples
+
+    for line_no, line in enumerate(lines, 1):
+        if line.startswith("#") or not line.strip():
+            continue
+
+        if keys is None:
+            keys = line.split()
+            continue
+
+        try:
+            values = line.split()
+
+            if len(values) != len(keys):
+                errors.append(
+                    Error(
+                        path,
+                        line_no,
+                        line,
+                        f"Number of values ({len(values)}) does not match"
+                        f"number of keys in header ({len(keys)})",
+                    )
+                )
+                continue
+
+            examples.append(dict(zip(keys, values)))
+        except Exception as ex:
+            errors.append(
+                Error(
+                    path,
+                    line_no,
+                    line,
+                    str(ex),
+                )
+            )
+
+    return examples, errors
+
+
 def parse(path: str, lines: list[str]) -> Specfile:
     specfile = Specfile(path)
+
     env_path = specfile.path.with_suffix(".ispec.env")
 
     if env_path.exists():
         environment, errors = parse_env(env_path, env_path.read_text().splitlines())
         specfile.environment.update(environment)
+        specfile.errors.extend(errors)
+
+    examples_path = specfile.path.with_suffix(".ispec.examples")
+
+    if examples_path.exists():
+        examples, errors = parse_examples(
+            examples_path, examples_path.read_text().splitlines()
+        )
+        specfile.examples = examples
         specfile.errors.extend(errors)
 
     for line_no, line in enumerate(lines, 1):

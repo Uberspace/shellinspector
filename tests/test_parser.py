@@ -315,6 +315,24 @@ def test_environment():
     }
 
 
+def test_examples():
+    path = Path(__file__).parent / "e2e/600_examplestest.ispec"
+    specfile = parse(path, [])
+
+    assert len(specfile.errors) == 0
+
+    assert specfile.examples == [
+        {
+            "PY_COMMAND": "python3.10",
+            "PY_VERSION": "3.10",
+        },
+        {
+            "PY_COMMAND": "python3.11",
+            "PY_VERSION": "3.11",
+        },
+    ]
+
+
 def test_include_missing_file():
     path = Path(__file__).parent / "virtual.ispec"
     specfile = parse(

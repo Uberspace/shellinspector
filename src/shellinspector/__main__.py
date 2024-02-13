@@ -39,8 +39,8 @@ def get_ssh_config(target_host):
         }
 
 
-def handle_spec_file(runner, path):
-    LOGGER.info("handling %s", path)
+def parse_spec_file(path):
+    LOGGER.debug("parsing %s", path)
 
     spec_file = Path(path).resolve()
 
@@ -50,6 +50,9 @@ def handle_spec_file(runner, path):
 
     lines = spec_file.read_text().splitlines()
     specfile = parse(spec_file, lines)
+
+    for i, command in enumerate(specfile.commands):
+        LOGGER.debug("command[%s]: %s", i, command.short)
 
     if specfile.errors:
         for error in specfile.errors:
@@ -63,13 +66,10 @@ def handle_spec_file(runner, path):
 
         return False
 
-    for i, command in enumerate(specfile.commands):
-        LOGGER.debug("command[%s]: %s", i, command.short)
-
-    return runner.run(specfile)
+    return specfile
 
 
-def run(target_host, spec_files, identity, verbose):
+def run(target_host, spec_file_paths, identity, verbose):
     ssh_config = get_ssh_config(target_host)
     ssh_config["ssh_key"] = identity
 
@@ -85,8 +85,28 @@ def run(target_host, spec_files, identity, verbose):
     runner.add_reporter(ConsoleReporter())
     success = True
 
+    spec_files = []
+
+    for spec_file_path in spec_file_paths:
+        spec_file = parse_spec_file(spec_file_path)
+
+        if spec_file.examples:
+            for example in spec_file.examples:
+                spec_files.append(spec_file.as_example(example))
+        else:
+            spec_files.append(spec_file)
+
     for spec_file in spec_files:
-        success = success & handle_spec_file(runner, spec_file)
+        if len(spec_files) > 1:
+            if spec_file.applied_example:
+                example_str = ",".join(
+                    f"{k}={v}" for k, v in spec_file.applied_example.items()
+                )
+                print(f"{spec_file.path} (w/ {example_str})")
+            else:
+                print(f"{spec_file.path}")
+
+        success = success & runner.run(spec_file)
 
     return 0 if success else 1
 
@@ -112,7 +132,7 @@ def parse_args(argv=None):
         default=False,
     )
     parser.add_argument(
-        "spec_files",
+        "spec_file_paths",
         nargs="+",
     )
 
