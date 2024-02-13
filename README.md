@@ -5,7 +5,7 @@ back.
 
 [![asciicast](https://asciinema.org/a/IfzFtiTPjabw4etcMJmpcuH8f.svg)](https://asciinema.org/a/IfzFtiTPjabw4etcMJmpcuH8f)
 
-First, prepare a spec file, e.g. `readme.inspect`:
+First, prepare a spec file, e.g. `readme.ispec`:
 
 ```
 [@local]$~ ping -c1 google.com
@@ -17,7 +17,7 @@ shellinspector
 Then, run it:
 
 ```
-$ python -m shellinspector readme.inspect
+$ python -m shellinspector readme.ispec
 running readme.console
 PASS [@local]$~ ping -c1 google.com
 FAIL [@local]$ whoami

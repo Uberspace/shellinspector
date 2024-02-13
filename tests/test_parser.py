@@ -83,7 +83,7 @@ def test_parse_whitespace_regex():
 
 
 def test_parse_error():
-    path = Path(__file__).parent / "virtual.spec"
+    path = Path(__file__).parent / "virtual.ispec"
     errors, commands = parse(
         path,
         [
@@ -116,18 +116,18 @@ def test_parse_error():
 
 
 def test_parse_error_include():
-    path = Path(__file__).parent / "virtual.spec"
+    path = Path(__file__).parent / "virtual.ispec"
     errors, commands = parse(
         path,
         [
             "% ls1",
             "file",
-            "<data/test_error.spec",
+            "<data/test_error.ispec",
         ],
     )
 
     assert len(errors) == 1
-    assert errors[0].source_file == path.parent / "data/test_error.spec"
+    assert errors[0].source_file == path.parent / "data/test_error.ispec"
     assert errors[0].source_line_no == 1
     assert errors[0].source_line == "a"
 
@@ -138,7 +138,7 @@ def test_parse_error_include():
     assert commands[0].source_line_no == 1
     assert commands[1].command == "ls2"
     assert commands[1].expected
-    assert commands[1].source_file == path.parent / "data/test_error.spec"
+    assert commands[1].source_file == path.parent / "data/test_error.ispec"
     assert commands[1].source_line_no == 2
 
 
@@ -259,13 +259,13 @@ def test_variants(line, result):
 
 
 def test_include():
-    path = Path(__file__).parent / "virtual.spec"
+    path = Path(__file__).parent / "virtual.ispec"
     errors, commands = parse(
         path,
         [
             "% ls",
             "file",
-            "<data/test.spec",
+            "<data/test.ispec",
             "% ls",
             "file",
         ],
@@ -282,7 +282,7 @@ def test_include():
     assert commands[1].execution_mode == ExecutionMode.ROOT
     assert commands[1].command == "whoami"
     assert commands[1].expected == "root\n"
-    assert commands[1].source_file == Path(__file__).parent / "data/test.spec"
+    assert commands[1].source_file == Path(__file__).parent / "data/test.ispec"
     assert commands[1].source_line_no == 1
     assert commands[2].execution_mode == ExecutionMode.ROOT
     assert commands[2].command == "ls"
@@ -292,20 +292,20 @@ def test_include():
 
 
 def test_include_missing_file():
-    path = Path(__file__).parent / "virtual.spec"
+    path = Path(__file__).parent / "virtual.ispec"
     errors, commands = parse(
         path,
         [
             "% ls",
             "file",
-            "<data/test_not_existent.spec",
+            "<data/test_not_existent.ispec",
             "% ls",
             "file",
         ],
     )
 
     assert len(errors) == 1
-    assert "test_not_existent.spec does not exist" in errors[0].message
+    assert "test_not_existent.ispec does not exist" in errors[0].message
 
 
 def test_command_short_literal():
@@ -317,7 +317,7 @@ def test_command_short_literal():
         "local",
         AssertMode.LITERAL,
         "a\nb\n",
-        "/some.spec",
+        "/some.ispec",
         1,
         "$ echo a\nb",
     )
@@ -333,7 +333,7 @@ def test_command_short_regex():
         "local",
         AssertMode.REGEX,
         "a\nb",
-        "/some.spec",
+        "/some.ispec",
         1,
         "$ echo a\nb",
     )

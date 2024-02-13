@@ -1,6 +1,6 @@
 # Syntax
 
-First, prepare a spec file, e.g. `ssh_connection.inspect`:
+First, prepare a spec file, e.g. `ssh_connection.ispec`:
 
 ```
 % whoami
@@ -12,7 +12,7 @@ root
 Then, run it:
 
 ```
-$ python -m test tests/ssh_connection.inspect
+$ python -m test tests/ssh_connection.ispec
 PASS % whoami
 PASS % pwd
 ```
@@ -103,7 +103,7 @@ To just discard and ignore the output, use `_`:
 
 If a set of command repeates over and over in different spec files, you can
 extract it into a dedicated file to be used in different files. For example,
-creating a user happens over and over. Put it into `create_user.speci`.
+creating a user happens over and over. Put it into `create_user.ispec`.
 
 ```
 % uberspace user create -u testuser
@@ -113,7 +113,7 @@ Then, include it into other files by using `<` and the path. Note that the path
 is always relative to the file that contains the include.
 
 ```
-< create_user.speci
+< create_user.ispec
 % ls /home
 testuser
 ```
@@ -179,8 +179,8 @@ Exit codes of all commands are checked automatically. If the code is >0, the
 command is considered a failure:
 
 ```
-$ python -m test false.spec
-running false.spec
+$ python -m test false.ispec
+running false.ispec
 FAIL $ test -d /etc/nonexistant
 command failed (RC=1)
 ```
@@ -195,7 +195,7 @@ $ test -d /etc/nonexistant || true
 
 ```
 # Create a user and check the default python version
-< create_user.speci
+< create_user.ispec
 $~ python --version
 ^Python 3.10
 $~ pip --version

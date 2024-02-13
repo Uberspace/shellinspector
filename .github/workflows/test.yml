@@ -55,7 +55,7 @@ jobs:
           --verbose
           --target 127.0.0.1:2222
           --identity tests/keys/id_ed25519
-          tests/e2e/*.inspect
+          tests/e2e/*.ispec
       - name: Check integration test result
         run: |
           ssh root@127.0.0.1 -p 2222 -i tests/keys/id_ed25519 grep TEST /home/test/testfile
