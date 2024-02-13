@@ -49,7 +49,7 @@ $ docker-compose up -d
 Then, use `--target` and `--identity` to run tests:
 
 ```
-$ hatch run python -m shellinspector tests/e2e/* --target 127.0.0.1:2222 --identity tests/keys/id_ed25519
+$ hatch run python -m shellinspector tests/e2e/*.ispec --target 127.0.0.1:2222 --identity tests/keys/id_ed25519
 PASS % whoami
 PASS [whoami@remote]% whoami
 PASS [whoami@remote]% echo TEST > /root/testfile

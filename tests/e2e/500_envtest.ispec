@@ -1,0 +1,4 @@
+[@local]$ echo $something
+else
+[@local]$ echo $number
+2

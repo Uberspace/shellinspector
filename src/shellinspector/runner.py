@@ -323,6 +323,7 @@ class ShellRunner:
 
                 if session not in used_sessions:
                     used_sessions.add(session)
+                    session.set_environment(specfile.environment)
                     session.set_environment(self.context)
                     session.push_state()
 

@@ -536,6 +536,46 @@ def test_logout(make_runner, ssh_config):
 
     runner.run(specfile)
 
+    for event in events:
+        assert event[0][0] in (
+            RunnerEvent.COMMAND_STARTING,
+            RunnerEvent.COMMAND_PASSED,
+            RunnerEvent.RUN_SUCCEEDED,
+        ), event
+
+
+def test_environment(make_runner, ssh_config):
+    runner, events = make_runner(ssh_config)
+    specfile = Specfile("virtual.ispec")
+
+    specfile.environment = {
+        "something": "value__",
+    }
+
+    specfile.commands = [
+        Command(
+            ExecutionMode.ROOT,
+            "echo $something",
+            "root",
+            None,
+            "remote",
+            AssertMode.LITERAL,
+            "value__\n",
+            "/some.ispec",
+            1,
+            "$ echo $something",
+        ),
+    ]
+
+    runner.run(specfile)
+
+    for event in events:
+        assert event[0][0] in (
+            RunnerEvent.COMMAND_STARTING,
+            RunnerEvent.COMMAND_PASSED,
+            RunnerEvent.RUN_SUCCEEDED,
+        ), event
+
 
 class FakeSession:
     def __init__(self, prompt_works, before):
