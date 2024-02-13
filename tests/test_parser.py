@@ -301,7 +301,7 @@ def test_include():
 
 
 def test_environment():
-    path = Path(__file__).parent / "data/envtest.ispec"
+    path = Path(__file__).parent / "e2e/500_envtest.ispec"
     specfile = parse(path, [])
 
     assert len(specfile.errors) == 0
