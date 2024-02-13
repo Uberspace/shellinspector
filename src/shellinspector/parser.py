@@ -49,6 +49,18 @@ class Error:
     message: str
 
 
+@dataclass
+class Specfile:
+    path: Path
+    commands: list[Command]
+    errors: list[Error]
+
+    def __init__(self, path, commands=None, errors=None):
+        self.path = Path(path)
+        self.commands = commands or []
+        self.errors = errors or []
+
+
 # parse a line like
 #   [user@host]$ ls
 # into ("user", "host", "$")
@@ -69,11 +81,8 @@ RE_PREFIX = re.compile(
 )
 
 
-def parse(path, lines):
-    path = Path(path)
-
-    errors = []
-    commands = []
+def parse(path: str, lines: list[str]) -> Specfile:
+    specfile = Specfile(path)
 
     for line_no, line in enumerate(lines, 1):
         # comment
@@ -83,10 +92,10 @@ def parse(path, lines):
         prefix = RE_PREFIX.match(line)
 
         # output before very first command
-        if not prefix and not commands:
-            errors.append(
+        if not prefix and not specfile.commands:
+            specfile.errors.append(
                 Error(
-                    path,
+                    specfile.path,
                     line_no,
                     line,
                     "syntax error: output before first command, missing prefix?",
@@ -96,23 +105,23 @@ def parse(path, lines):
 
         # include
         if line.startswith("<"):
-            include_path = (path.parent / line[1:]).resolve()
+            include_path = (specfile.path.parent / line[1:]).resolve()
 
             if not include_path.exists():
-                errors.append(
+                specfile.errors.append(
                     Error(
-                        path,
+                        specfile.path,
                         line_no,
                         line,
                         f"include error: {include_path} does not exist",
                     )
                 )
             else:
-                include_errors, include_commands = parse(
+                included_specfile = parse(
                     include_path, include_path.read_text().splitlines()
                 )
-                errors.extend(include_errors)
-                commands.extend(include_commands)
+                specfile.errors.extend(included_specfile.errors)
+                specfile.commands.extend(included_specfile.commands)
 
             continue
 
@@ -134,7 +143,7 @@ def parse(path, lines):
             try:
                 last_command = next(
                     cmd
-                    for cmd in reversed(commands)
+                    for cmd in reversed(specfile.commands)
                     if cmd.execution_mode == execution_mode
                 )
                 user = user or last_command.user
@@ -142,7 +151,7 @@ def parse(path, lines):
             except (StopIteration, IndexError):
                 host = host or "remote"
 
-            commands.append(
+            specfile.commands.append(
                 Command(
                     execution_mode,
                     command,
@@ -151,18 +160,18 @@ def parse(path, lines):
                     host,
                     assert_mode,
                     "",
-                    path,
+                    specfile.path,
                     line_no,
                     line,
                 )
             )
         else:
             # add output line to last command
-            commands[-1].expected += line + "\n"
+            specfile.commands[-1].expected += line + "\n"
 
-    for cmd in commands:
+    for cmd in specfile.commands:
         if cmd.assert_mode == AssertMode.REGEX:
             # remove trailing new lines for regexes, see syntax.md
             cmd.expected = cmd.expected.rstrip("\n")
 
-    return (errors, commands)
+    return specfile

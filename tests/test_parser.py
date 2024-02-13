@@ -9,7 +9,7 @@ from shellinspector.parser import parse
 
 
 def test_parse():
-    errors, commands = parse(
+    specfile = parse(
         "/dev/null",
         [
             "$ echo a",
@@ -23,6 +23,7 @@ def test_parse():
             "file",
         ],
     )
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
     assert len(commands) == 3
@@ -47,7 +48,7 @@ def test_parse():
 
 
 def test_parse_whitespace_literal():
-    errors, commands = parse(
+    specfile = parse(
         "/dev/null",
         [
             "$ echo ab",
@@ -55,6 +56,7 @@ def test_parse_whitespace_literal():
             "b",
         ],
     )
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
     assert len(commands) == 1
@@ -63,7 +65,7 @@ def test_parse_whitespace_literal():
 
 
 def test_parse_whitespace_regex():
-    errors, commands = parse(
+    specfile = parse(
         "/dev/null",
         [
             "%~ /usr/bin/which --help",
@@ -71,6 +73,7 @@ def test_parse_whitespace_regex():
             "Write the full path of COMMAND",
         ],
     )
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
     assert len(commands) == 1
@@ -84,7 +87,7 @@ def test_parse_whitespace_regex():
 
 def test_parse_error():
     path = Path(__file__).parent / "virtual.ispec"
-    errors, commands = parse(
+    specfile = parse(
         path,
         [
             "random text1",
@@ -95,6 +98,7 @@ def test_parse_error():
             "file",
         ],
     )
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 2
     assert errors[0].source_file == path
@@ -117,7 +121,7 @@ def test_parse_error():
 
 def test_parse_error_include():
     path = Path(__file__).parent / "virtual.ispec"
-    errors, commands = parse(
+    specfile = parse(
         path,
         [
             "% ls1",
@@ -125,6 +129,7 @@ def test_parse_error_include():
             "<data/test_error.ispec",
         ],
     )
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 1
     assert errors[0].source_file == path.parent / "data/test_error.ispec"
@@ -143,7 +148,7 @@ def test_parse_error_include():
 
 
 def test_user_reuse():
-    errors, commands = parse(
+    specfile = parse(
         "/dev/null",
         [
             "[someuser@]$ ls",
@@ -154,6 +159,7 @@ def test_user_reuse():
             "$ ls",
         ],
     )
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
 
@@ -172,7 +178,8 @@ def test_user_reuse():
 
 
 def test_empty():
-    errors, commands = parse("/dev/null", [])
+    specfile = parse("/dev/null", [])
+    commands, errors = (specfile.commands, specfile.errors)
     assert len(errors) == 0
     assert len(commands) == 0
 
@@ -249,7 +256,8 @@ def test_empty():
     ],
 )
 def test_variants(line, result):
-    errors, commands = parse("/dev/null", [line])
+    specfile = parse("/dev/null", [line])
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
     assert commands[0].command == "ls"
@@ -260,7 +268,7 @@ def test_variants(line, result):
 
 def test_include():
     path = Path(__file__).parent / "virtual.ispec"
-    errors, commands = parse(
+    specfile = parse(
         path,
         [
             "% ls",
@@ -270,6 +278,7 @@ def test_include():
             "file",
         ],
     )
+    commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
     assert len(commands) == 3
@@ -293,7 +302,7 @@ def test_include():
 
 def test_include_missing_file():
     path = Path(__file__).parent / "virtual.ispec"
-    errors, commands = parse(
+    specfile = parse(
         path,
         [
             "% ls",
@@ -304,8 +313,8 @@ def test_include_missing_file():
         ],
     )
 
-    assert len(errors) == 1
-    assert "test_not_existent.ispec does not exist" in errors[0].message
+    assert len(specfile.errors) == 1
+    assert "test_not_existent.ispec does not exist" in specfile.errors[0].message
 
 
 def test_command_short_literal():

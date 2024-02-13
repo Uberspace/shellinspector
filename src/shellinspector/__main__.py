@@ -39,7 +39,7 @@ def get_ssh_config(target_host):
         }
 
 
-def run_spec_file(runner, path):
+def handle_spec_file(runner, path):
     LOGGER.info("handling %s", path)
 
     spec_file = Path(path).resolve()
@@ -49,10 +49,10 @@ def run_spec_file(runner, path):
         return False
 
     lines = spec_file.read_text().splitlines()
-    errors, commands = parse(spec_file, lines)
+    specfile = parse(spec_file, lines)
 
-    if errors:
-        for error in errors:
+    if specfile.errors:
+        for error in specfile.errors:
             LOGGER.error(
                 "%s:%s: %s, %s",
                 error.source_file.name,
@@ -63,10 +63,10 @@ def run_spec_file(runner, path):
 
         return False
 
-    for i, command in enumerate(commands):
+    for i, command in enumerate(specfile.commands):
         LOGGER.debug("command[%s]: %s", i, command.short)
 
-    return runner.run(commands)
+    return runner.run(specfile.commands)
 
 
 def run(target_host, spec_files, identity, verbose):
@@ -86,7 +86,7 @@ def run(target_host, spec_files, identity, verbose):
     success = True
 
     for spec_file in spec_files:
-        success = success & run_spec_file(runner, spec_file)
+        success = success & handle_spec_file(runner, spec_file)
 
     return 0 if success else 1
 
