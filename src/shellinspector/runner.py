@@ -302,11 +302,11 @@ class ShellRunner:
 
         return self._check_result(cmd, command_output, int(rc_output))
 
-    def run(self, commands):
+    def run(self, specfile):
         used_sessions = set()
 
         try:
-            for cmd in commands:
+            for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
 
                 session = self._get_session(cmd)

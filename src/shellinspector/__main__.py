@@ -66,7 +66,7 @@ def handle_spec_file(runner, path):
     for i, command in enumerate(specfile.commands):
         LOGGER.debug("command[%s]: %s", i, command.short)
 
-    return runner.run(specfile.commands)
+    return runner.run(specfile)
 
 
 def run(target_host, spec_files, identity, verbose):

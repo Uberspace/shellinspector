@@ -7,6 +7,7 @@ from pytest_lazyfixture import lazy_fixture
 from shellinspector.parser import AssertMode
 from shellinspector.parser import Command
 from shellinspector.parser import ExecutionMode
+from shellinspector.parser import Specfile
 from shellinspector.runner import LocalShell
 from shellinspector.runner import RemoteShell
 from shellinspector.runner import RunnerEvent
@@ -492,8 +493,9 @@ def test_get_session_unknown_host(make_runner, ssh_config):
 
 def test_logout(make_runner, ssh_config):
     runner, events = make_runner(ssh_config)
+    specfile = Specfile("virtual.ispec")
 
-    cmds = [
+    specfile.commands = [
         Command(
             ExecutionMode.ROOT,
             "echo a",
@@ -532,7 +534,7 @@ def test_logout(make_runner, ssh_config):
         ),
     ]
 
-    runner.run(cmds)
+    runner.run(specfile)
 
 
 class FakeSession:
@@ -667,8 +669,10 @@ def test_run1(
     runner, events = make_runner()
     session = FakeSession(prompt_works, actual_output)
     runner._get_session = lambda cmd: session
+    specfile = Specfile("virtual.ispec")
+    specfile.commands = [command_local_echo_literal]
 
-    result = runner.run([command_local_echo_literal])
+    result = runner.run(specfile)
     assert result == expected_result, events
 
     assert len(events) == len(expected_events)
