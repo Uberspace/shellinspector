@@ -300,6 +300,21 @@ def test_include():
     assert commands[2].source_line_no == 4
 
 
+def test_environment():
+    path = Path(__file__).parent / "data/envtest.ispec"
+    specfile = parse(path, [])
+
+    assert len(specfile.errors) == 0
+
+    assert specfile.environment == {
+        "something": "else",
+        "withspace": "with space",
+        "valuewithequals": "e=quals",
+        # provided twice, last value counts
+        "number": "2",
+    }
+
+
 def test_include_missing_file():
     path = Path(__file__).parent / "virtual.ispec"
     specfile = parse(

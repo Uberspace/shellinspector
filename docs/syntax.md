@@ -191,6 +191,25 @@ To ignore the check, hide the return code like so:
 $ test -d /etc/nonexistant || true
 ```
 
+## Environment
+
+To prepare the test envrionment, create a file called `test.ispec.env` next to
+`test.ispec`:
+
+`test.ispec`:
+
+```
+$ echo $DNS_SERVER
+1.1.1.1
+```
+
+`test.ispec.env`:
+
+```
+# which DNS server to test
+DNS_SERVER=1.1.1.1
+```
+
 ## Examples
 
 ```

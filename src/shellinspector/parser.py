@@ -54,11 +54,13 @@ class Specfile:
     path: Path
     commands: list[Command]
     errors: list[Error]
+    environment: dict[str, str]
 
-    def __init__(self, path, commands=None, errors=None):
+    def __init__(self, path, commands=None, errors=None, environment=None):
         self.path = Path(path)
         self.commands = commands or []
         self.errors = errors or []
+        self.environment = environment or {}
 
 
 # parse a line like
@@ -81,8 +83,52 @@ RE_PREFIX = re.compile(
 )
 
 
+def parse_env(path, lines: list[str]):
+    errors = []
+    environment = {}
+
+    for line_no, line in enumerate(lines, 1):
+        try:
+            k, _, v = line.partition("=")
+            k = k.strip()
+            v = v.strip()
+
+            if k.startswith("#"):
+                continue
+
+            if not v:
+                errors.append(
+                    Error(
+                        path,
+                        line_no,
+                        line,
+                        "line has no value",
+                    )
+                )
+                continue
+
+            environment[k] = v
+        except Exception as ex:
+            errors.append(
+                Error(
+                    path,
+                    line_no,
+                    line,
+                    str(ex),
+                )
+            )
+
+    return environment, errors
+
+
 def parse(path: str, lines: list[str]) -> Specfile:
     specfile = Specfile(path)
+    env_path = specfile.path.with_suffix(".ispec.env")
+
+    if env_path.exists():
+        environment, errors = parse_env(env_path, env_path.read_text().splitlines())
+        specfile.environment.update(environment)
+        specfile.errors.extend(errors)
 
     for line_no, line in enumerate(lines, 1):
         # comment
