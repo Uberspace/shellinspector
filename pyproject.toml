@@ -41,7 +41,9 @@ path = "src/shellinspector/__about__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
-  "pytest",
+  # pytest-lazy-fixture breaks with 8.0
+  # https://github.com/TvoroG/pytest-lazy-fixture/issues/65
+  "pytest<8.0",
   "pytest-cov",
   "pyinstaller",
   "pre-commit",
