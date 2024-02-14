@@ -41,7 +41,7 @@ class RemoteShell(pxssh.pxssh):
 
     def set_environment(self, context):
         for k, v in context.items():
-            self.sendline(f"export {k}='{shlex.quote(str(v))}'")
+            self.sendline(f"export {k}={shlex.quote(str(v))}")
             assert self.prompt()
 
     def push_state(self):

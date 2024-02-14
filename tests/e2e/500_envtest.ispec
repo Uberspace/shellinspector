@@ -2,3 +2,5 @@
 else
 [@local]$ echo $number
 2
+[@local]$ echo $quotetest
+'
