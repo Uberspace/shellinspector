@@ -187,6 +187,20 @@ def test_remoteshell(ssh_config):
     assert shell.before.decode() == "c\r\n"
 
 
+def test_remoteshell_get_environment(ssh_config):
+    with disable_color():
+        shell = RemoteShell(timeout=2)
+        shell.login(**ssh_config)
+
+    shell.sendline("export SPACES='a b'")
+    assert shell.prompt(), shell.before
+
+    env = shell.get_environment()
+    assert len(env) > 5
+    assert env["HOME"] == "/root"
+    assert env["SPACES"] == "a b"
+
+
 def test_get_localshell():
     shell = get_localshell()
     shell.sendline("echo a")

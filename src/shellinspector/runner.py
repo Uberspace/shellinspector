@@ -44,6 +44,25 @@ class RemoteShell(pxssh.pxssh):
             self.sendline(f"export {k}={shlex.quote(str(v))}")
             assert self.prompt()
 
+    def get_environment(self):
+        success, output = self.run_command("export")
+
+        if not success:
+            raise NotImplementedError()
+
+        env = {}
+
+        for line in output.splitlines():
+            line = line.removeprefix("export ")
+            k, _, v = line.partition("=")
+
+            if not v:
+                continue
+
+            env[k] = " ".join(shlex.split(v))
+
+        return env
+
     def push_state(self):
         self.push_depth += 1
 
