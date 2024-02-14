@@ -48,6 +48,7 @@ dependencies = [
   "pyinstaller",
   "pre-commit",
   "pytest-lazy-fixture",
+  "pytest-mock==3.12.0",
 ]
 [tool.hatch.envs.default.scripts]
 cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=shellinspector --cov=tests {args}"

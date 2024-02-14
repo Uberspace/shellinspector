@@ -559,6 +559,96 @@ def test_logout(make_runner, ssh_config):
         ), event
 
 
+def test_runner_python(mocker, make_runner, ssh_config):
+    def fake_run_in_file(filename, si_context, code):
+        assert filename == Path("virtual.ispec.py")
+        assert isinstance(si_context.env, dict)
+        assert si_context.env["HOME"] == "/root"
+        assert code == "return_true()"
+
+        return True
+
+    run_in_file = mocker.patch(
+        "shellinspector.runner.run_in_file",
+        side_effect=fake_run_in_file,
+    )
+
+    runner, events = make_runner(ssh_config)
+    specfile = Specfile("virtual.ispec")
+
+    specfile.commands = [
+        Command(
+            ExecutionMode.PYTHON,
+            "return_true()",
+            "root",
+            None,
+            "remote",
+            AssertMode.LITERAL,
+            "",
+            "/virtual.ispec",
+            1,
+            "return_true()",
+        ),
+    ]
+
+    runner.run(specfile)
+
+    assert len(events) == 3
+
+    for event in events:
+        assert event[0][0] in (
+            RunnerEvent.COMMAND_STARTING,
+            RunnerEvent.COMMAND_PASSED,
+            RunnerEvent.RUN_SUCCEEDED,
+        ), event
+
+    assert run_in_file.call_count == 1
+
+
+def test_runner_python_fail(mocker, make_runner, ssh_config):
+    def fake_run_in_file(*args, **kwargs):
+        return "fail"
+
+    run_in_file = mocker.patch(
+        "shellinspector.runner.run_in_file",
+        side_effect=fake_run_in_file,
+    )
+
+    runner, events = make_runner(ssh_config)
+    specfile = Specfile("virtual.ispec")
+
+    specfile.commands = [
+        Command(
+            ExecutionMode.PYTHON,
+            "return_true()",
+            "root",
+            None,
+            "remote",
+            AssertMode.LITERAL,
+            "",
+            "/virtual.ispec",
+            1,
+            "return_true()",
+        ),
+    ]
+
+    runner.run(specfile)
+
+    assert len(events) == 3
+
+    for event in events:
+        assert event[0][0] in (
+            RunnerEvent.COMMAND_STARTING,
+            RunnerEvent.COMMAND_FAILED,
+            RunnerEvent.RUN_FAILED,
+        ), event
+
+        if event[0][0] == RunnerEvent.COMMAND_FAILED:
+            assert event[1]["message"] == "fail"
+
+    assert run_in_file.call_count == 1
+
+
 def test_environment(make_runner, ssh_config):
     runner, events = make_runner(ssh_config)
     specfile = Specfile("virtual.ispec")

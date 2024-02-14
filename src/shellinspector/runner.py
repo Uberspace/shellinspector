@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import ast
+import dataclasses
 import enum
 import logging
 import os
@@ -15,8 +16,15 @@ from pexpect import spawn
 from pexpect.pxssh import ExceptionPxssh
 
 from shellinspector.parser import AssertMode
+from shellinspector.parser import ExecutionMode
 
 LOGGER = logging.getLogger(Path(__file__).name)
+
+
+@dataclasses.dataclass
+class ShellinspectorPyContext:
+    applied_example: dict
+    env: dict
 
 
 def run_in_file(filename, si_context, code):
@@ -381,28 +389,54 @@ class ShellRunner:
         try:
             for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
-
                 session = self._get_session(cmd)
 
-                if cmd.command == "logout":
-                    self._close_session(cmd)
-                    used_sessions.remove(session)
-                    self.report(
-                        RunnerEvent.COMMAND_PASSED,
-                        cmd,
-                        {"returncode": 0, "actual": ""},
-                    )
-                    continue
+                if cmd.execution_mode == ExecutionMode.PYTHON:
+                    ctx = ShellinspectorPyContext({}, {})
+                    filename = specfile.path.with_suffix(".ispec.py")
+                    ctx.env = session.get_environment()
+                    original_env = ctx.env.copy()
 
-                if session not in used_sessions:
-                    used_sessions.add(session)
-                    session.set_environment(specfile.environment)
-                    session.set_environment(self.context)
-                    session.push_state()
+                    try:
+                        result = run_in_file(filename, ctx, cmd.command)
+                    except Exception as ex:
+                        LOGGER.exception(f"could not run python command: {cmd.command}")
+                        result = str(ex)
 
-                if not self._run_command(session, cmd):
-                    self.report(RunnerEvent.RUN_FAILED, None, {})
-                    return False
+                    if result is True:
+                        changed_env = dict(ctx.env.items() - original_env.items())
+                        LOGGER.info(
+                            "setting changed env vars: "
+                            + " ".join(f"{k}='{v}'" for k, v in changed_env.items())
+                        )
+                        session.set_environment(changed_env)
+                        self.report(RunnerEvent.COMMAND_PASSED, cmd, {})
+                    else:
+                        self.report(
+                            RunnerEvent.COMMAND_FAILED, None, {"message": result}
+                        )
+                        self.report(RunnerEvent.RUN_FAILED, None, {})
+                        return False
+                else:
+                    if cmd.command == "logout":
+                        self._close_session(cmd)
+                        used_sessions.remove(session)
+                        self.report(
+                            RunnerEvent.COMMAND_PASSED,
+                            cmd,
+                            {"returncode": 0, "actual": ""},
+                        )
+                        continue
+
+                    if session not in used_sessions:
+                        used_sessions.add(session)
+                        session.set_environment(specfile.environment)
+                        session.set_environment(self.context)
+                        session.push_state()
+
+                    if not self._run_command(session, cmd):
+                        self.report(RunnerEvent.RUN_FAILED, None, {})
+                        return False
         finally:
             for session in used_sessions:
                 session.pop_state()
