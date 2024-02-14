@@ -577,7 +577,7 @@ def test_environment(make_runner, ssh_config):
         ), event
 
 
-class FakeSession:
+class FakeSession(RemoteShell):
     def __init__(self, prompt_works, before):
         self._prompt_works = prompt_works
         self._before = before

@@ -27,6 +27,18 @@ class RemoteShell(pxssh.pxssh):
 
         self.push_depth = 0
 
+    def run_command(self, line):
+        self.sendline(line)
+        found_prompt = self.prompt()
+        actual_output = self.before.decode()
+        actual_output = actual_output.replace("\r\n", "\n")
+
+        if found_prompt:
+            return True, actual_output
+        else:
+            self.close()
+            return False, actual_output
+
     def set_environment(self, context):
         for k, v in context.items():
             self.sendline(f"export {k}='{shlex.quote(str(v))}'")
@@ -274,31 +286,31 @@ class ShellRunner:
             return False
 
     def _run_command(self, session, cmd):
-        def sendline(line, prompt_cause):
-            session.sendline(line)
-            found_prompt = session.prompt()
-            actual_output = session.before.decode()
-            actual_output = actual_output.replace("\r\n", "\n")
-
-            if found_prompt:
-                return actual_output
-            else:
-                session.close()
-                self.report(
-                    RunnerEvent.ERROR,
-                    cmd,
-                    {
-                        "message": "could not find prompt for " + prompt_cause,
-                        "actual": actual_output,
-                    },
-                )
-                return False
-
-        if (command_output := sendline(cmd.command, "command")) is False:
+        success, command_output = session.run_command(cmd.command)
+        if not success:
+            self.report(
+                RunnerEvent.ERROR,
+                cmd,
+                {
+                    "message": "could not find prompt for command",
+                    "actual": command_output,
+                },
+            )
             return False
 
-        if (rc_output := sendline("echo $?", "return code")) is False:
+        success, rc_output = session.run_command("echo $?")
+        if not success:
+            self.report(
+                RunnerEvent.ERROR,
+                cmd,
+                {
+                    "message": "could not find prompt for return code",
+                    "actual": rc_output,
+                },
+            )
             return False
+
+        rc_output = int(rc_output)
 
         return self._check_result(cmd, command_output, int(rc_output))
 
