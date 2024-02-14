@@ -15,6 +15,7 @@ from shellinspector.runner import ShellRunner
 from shellinspector.runner import disable_color
 from shellinspector.runner import get_localshell
 from shellinspector.runner import get_ssh_session
+from shellinspector.runner import run_in_file
 
 
 @pytest.fixture
@@ -738,3 +739,51 @@ def test_run1(
         else:
             assert events[i][0][1].command == expected_events[i][1]
         assert events[i][1] == expected_events[i][2]
+
+
+def test_run_in_file():
+    assert (
+        run_in_file(
+            Path(__file__).parent / "e2e/700_python.ispec.py", None, "return_true()"
+        )
+        is True
+    )
+    assert (
+        run_in_file(
+            Path(__file__).parent / "e2e/700_python.ispec.py", None, "return_str()"
+        )
+        == "a string"
+    )
+
+
+def test_run_in_file_pass_context():
+    class Context:
+        pass
+
+    context_in = Context()
+    context_out = run_in_file(
+        Path(__file__).parent / "e2e/700_python.ispec.py",
+        context_in,
+        "return_context()",
+    )
+    assert context_in is context_out
+    assert context_in.from_inside is True
+
+
+def test_run_in_file_multiple_statements():
+    with pytest.raises(Exception) as ex:
+        run_in_file(
+            Path(__file__).parent / "e2e/700_python.ispec.py",
+            None,
+            "return_true()\nreturn_true()",
+        )
+
+    assert "Only one and exactly one function call" in str(ex)
+    assert "2" in str(ex)
+
+
+def test_run_in_file_non_call():
+    with pytest.raises(Exception) as ex:
+        run_in_file(Path(__file__).parent / "e2e/700_python.ispec.py", None, "1 + 1")
+
+    assert "Only function calls are supported" in str(ex)

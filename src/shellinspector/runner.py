@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import ast
 import enum
 import logging
 import os
@@ -16,6 +17,47 @@ from pexpect.pxssh import ExceptionPxssh
 from shellinspector.parser import AssertMode
 
 LOGGER = logging.getLogger(Path(__file__).name)
+
+
+def run_in_file(filename, si_context, code):
+    source = Path(filename).read_bytes()
+    node = ast.parse(source, filename)
+
+    call_ast = ast.parse(code)
+
+    if len(call_ast.body) != 1:
+        raise NotImplementedError(
+            f"Only one and exactly one function call is supported, you provided {len(call_ast.body)} statements"
+        )
+
+    call = call_ast.body[0].value
+
+    if not isinstance(call, ast.Call):
+        raise NotImplementedError(
+            f"Only function calls are supported, you provided {call}"
+        )
+
+    call.args.insert(0, ast.Name(id="context", ctx=ast.Load()))
+
+    # add function call for the given function_name and args,
+    # also add an extra argument in front passing the given si_context.
+    call = ast.Assign(
+        targets=[ast.Name(id="_return_value", ctx=ast.Store())],
+        value=call,
+    )
+
+    node.body.append(call)
+
+    ast.fix_missing_locations(node)
+    obj = compile(node, filename=filename, mode="exec")
+
+    globalz = {
+        "context": si_context,
+    }
+
+    exec(obj, globalz, globalz)
+
+    return globalz["_return_value"]
 
 
 class RemoteShell(pxssh.pxssh):
