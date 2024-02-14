@@ -8,6 +8,7 @@ from pathlib import Path
 class ExecutionMode(Enum):
     USER = "$"
     ROOT = "%"
+    PYTHON = "!"
 
 
 class AssertMode(Enum):

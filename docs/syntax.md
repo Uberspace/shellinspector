@@ -230,6 +230,41 @@ python3.10    3.10
 python3.11    3.11
 ```
 
+## Python code
+
+Sometimes shellinspector checks are not enough, so you can also run python
+snippets like so:
+
+`test.ispec`:
+
+```
+! check_postgres_connection("testy")
+[@local]! set_env("did_python_run", "it did")
+[@local]$ echo $did_python_run
+it did
+```
+
+`test.ispec.py`
+
+```python
+def set_env(context, key, value):
+    context.env[key] = value
+    return True
+```
+
+The extra argument `ctx` is of type `ShellinspectorContext`, you can use the
+following attributes:
+
+- `.applied_example`, `dict`, (readonly): current config, see "Parametrized tests".
+- `.env`, `dict`, (read/write): shell environment variables.
+
+Return `True` to let this command pass, return error message as non-empty str
+to fail. Other values will error.
+
+Note that even though `[@local]!` specifies a host and user, the python code is
+always executed on the control machine. The host/user spec only determines which
+session is used for `ctx.env`.
+
 ## Examples
 
 ```

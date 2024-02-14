@@ -21,12 +21,13 @@ def test_parse():
             "otherfile",
             "%~ ls dir",
             "file",
+            "! func()",
         ],
     )
     commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
-    assert len(commands) == 3
+    assert len(commands) == 4
 
     assert commands[0].execution_mode == ExecutionMode.USER
     assert commands[0].command == "echo a"
@@ -45,6 +46,11 @@ def test_parse():
     assert commands[2].assert_mode == AssertMode.REGEX
     assert commands[2].source_file == Path("/dev/null")
     assert commands[2].source_line_no == 8
+    assert commands[3].execution_mode == ExecutionMode.PYTHON
+    assert commands[3].command == "func()"
+    assert commands[3].assert_mode == AssertMode.LITERAL
+    assert commands[3].source_file == Path("/dev/null")
+    assert commands[3].source_line_no == 10
 
 
 def test_parse_whitespace_literal():
@@ -252,6 +258,14 @@ def test_empty():
         (
             "[someuser@local]% ls",
             {"execution_mode": ExecutionMode.ROOT, "user": "root", "host": "local"},
+        ),
+        (
+            "[someuser@local]! ls",
+            {
+                "execution_mode": ExecutionMode.PYTHON,
+                "user": "someuser",
+                "host": "local",
+            },
         ),
     ],
 )
