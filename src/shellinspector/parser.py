@@ -294,6 +294,16 @@ def parse(path: str, lines: list[str]) -> Specfile:
                     line,
                 )
             )
+
+            if not user and execution_mode == ExecutionMode.USER:
+                specfile.errors.append(
+                    Error(
+                        path,
+                        line_no,
+                        line,
+                        "syntax error: command (and all before it) do not have a user specified",
+                    )
+                )
         else:
             # add output line to last command
             specfile.commands[-1].expected += line + "\n"

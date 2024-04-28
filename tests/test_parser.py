@@ -12,9 +12,11 @@ def test_parse():
     specfile = parse(
         "/dev/null",
         [
-            "$ echo a",
+            "[usr@]$ echo a",
             "# ignored",
             "a",
+            "$ echo b",
+            "b",
             "% ls",
             "file",
             "dir",
@@ -26,38 +28,48 @@ def test_parse():
     )
     commands, errors = (specfile.commands, specfile.errors)
 
-    assert len(errors) == 0
-    assert len(commands) == 4
+    assert len(errors) == 0, errors
+    assert len(commands) == 5
 
     assert commands[0].execution_mode == ExecutionMode.USER
+    assert commands[0].user == "usr"
     assert commands[0].command == "echo a"
     assert commands[0].assert_mode == AssertMode.LITERAL
     assert commands[0].expected == "a\n"
     assert commands[0].source_file == Path("/dev/null")
     assert commands[0].source_line_no == 1
-    assert commands[1].execution_mode == ExecutionMode.ROOT
-    assert commands[1].command == "ls"
+    assert commands[1].execution_mode == ExecutionMode.USER
+    assert commands[1].user == "usr"
+    assert commands[1].command == "echo b"
     assert commands[1].assert_mode == AssertMode.LITERAL
-    assert commands[1].expected == "file\ndir\notherfile\n"
+    assert commands[1].expected == "b\n"
     assert commands[1].source_file == Path("/dev/null")
     assert commands[1].source_line_no == 4
     assert commands[2].execution_mode == ExecutionMode.ROOT
-    assert commands[2].command == "ls dir"
-    assert commands[2].assert_mode == AssertMode.REGEX
+    assert commands[2].user == "root"
+    assert commands[2].command == "ls"
+    assert commands[2].assert_mode == AssertMode.LITERAL
+    assert commands[2].expected == "file\ndir\notherfile\n"
     assert commands[2].source_file == Path("/dev/null")
-    assert commands[2].source_line_no == 8
-    assert commands[3].execution_mode == ExecutionMode.PYTHON
-    assert commands[3].command == "func()"
-    assert commands[3].assert_mode == AssertMode.LITERAL
+    assert commands[2].source_line_no == 6
+    assert commands[3].execution_mode == ExecutionMode.ROOT
+    assert commands[3].user == "root"
+    assert commands[3].command == "ls dir"
+    assert commands[3].assert_mode == AssertMode.REGEX
     assert commands[3].source_file == Path("/dev/null")
     assert commands[3].source_line_no == 10
+    assert commands[4].execution_mode == ExecutionMode.PYTHON
+    assert commands[4].command == "func()"
+    assert commands[4].assert_mode == AssertMode.LITERAL
+    assert commands[4].source_file == Path("/dev/null")
+    assert commands[4].source_line_no == 12
 
 
 def test_parse_whitespace_literal():
     specfile = parse(
         "/dev/null",
         [
-            "$ echo ab",
+            "% echo ab",
             "a",
             "b",
         ],
@@ -89,6 +101,20 @@ def test_parse_whitespace_regex():
         commands[0].expected
         == "Usage: /usr/bin/which [options] [--] COMMAND [...]\nWrite the full path of COMMAND"
     )
+
+
+def test_parse_error_no_user():
+    specfile = parse(
+        "/dev/null",
+        [
+            "$ echo a",
+            "a",
+        ],
+    )
+    _, errors = (specfile.commands, specfile.errors)
+
+    assert len(errors) == 1
+    assert "not have a user specified" in errors[0].message
 
 
 def test_parse_error():
@@ -206,18 +232,6 @@ def test_empty():
             {"execution_mode": ExecutionMode.ROOT, "assert_mode": AssertMode.IGNORE},
         ),
         (
-            "$ ls",
-            {"execution_mode": ExecutionMode.USER, "assert_mode": AssertMode.LITERAL},
-        ),
-        (
-            "$~ ls",
-            {"execution_mode": ExecutionMode.USER, "assert_mode": AssertMode.REGEX},
-        ),
-        (
-            "$_ ls",
-            {"execution_mode": ExecutionMode.USER, "assert_mode": AssertMode.IGNORE},
-        ),
-        (
             "[someuser@somehost]$ ls",
             {
                 "execution_mode": ExecutionMode.USER,
@@ -239,19 +253,6 @@ def test_empty():
                 "execution_mode": ExecutionMode.USER,
                 "user": "someuser",
                 "host": "remote",
-                "session_name": "sess1",
-            },
-        ),
-        (
-            "[@local]$ ls",
-            {"execution_mode": ExecutionMode.USER, "user": None, "host": "local"},
-        ),
-        (
-            "[:sess1@local]$ ls",
-            {
-                "execution_mode": ExecutionMode.USER,
-                "user": None,
-                "host": "local",
                 "session_name": "sess1",
             },
         ),

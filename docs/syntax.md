@@ -133,8 +133,8 @@ a
 ## Target user & machine
 
 By default commands run inside the uberspace8 VM as the specified user (`%` for
-root, `$` for the newest user). To override this, expand the lines to look like
-a shell prompt:
+root, `$` for the user last specified). To override this, expand the lines to
+look like a shell prompt:
 
 ```
 # run on the local dev/ci machine
@@ -143,7 +143,12 @@ luto-portable
 # run as a different user on uberspace8 VM
 [usr1@remote]$ whoami
 usr1
+# run as the user last specified, in this case usr1
+$ whoam
+usr1
 ```
+
+Using `$` without a specified user as the first `$`-command will cause an error.
 
 ## Sessions
 
