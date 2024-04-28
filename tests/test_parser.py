@@ -326,6 +326,7 @@ def test_environment():
         "valuewithequals": "e=quals",
         # provided twice, last value counts
         "number": "2",
+        "quotetest": "'",
     }
 
 
