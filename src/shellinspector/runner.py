@@ -104,6 +104,7 @@ class RemoteShell(pxssh.pxssh):
 
         for line in output.splitlines():
             line = line.removeprefix("export ")
+            line = line.removeprefix("declare -x ")
             k, _, v = line.partition("=")
 
             if not v:
