@@ -295,7 +295,7 @@ def parse(path: str, lines: list[str]) -> Specfile:
                 )
             )
 
-            if not user and execution_mode == ExecutionMode.USER:
+            if not user and execution_mode == ExecutionMode.USER and host != "local":
                 specfile.errors.append(
                     Error(
                         path,
