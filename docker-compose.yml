@@ -1,5 +1,3 @@
-version: "3"
-
 services:
   openssh:
     image: alpine:latest
