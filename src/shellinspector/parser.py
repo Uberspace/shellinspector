@@ -1,8 +1,11 @@
 import re
+import typing
 from dataclasses import dataclass
 from dataclasses import replace
 from enum import Enum
 from pathlib import Path
+
+import yaml
 
 
 class ExecutionMode(Enum):
@@ -111,109 +114,39 @@ RE_PREFIX = re.compile(
 )
 
 
-def parse_env(path, lines: list[str]):
-    errors = []
-    environment = {}
+def parse_yaml_multidoc(stream: typing.IO) -> tuple[str, str]:
+    if stream.read(3) != "---":
+        stream.seek(0)
+        return {}, stream.read()
+    else:
+        stream.seek(0)
 
-    for line_no, line in enumerate(lines, 1):
-        try:
-            if line.startswith("#") or not line.strip():
-                continue
+    loader = yaml.SafeLoader(stream)
 
-            k, _, v = line.partition("=")
-            k = k.strip()
-            v = v.strip()
+    try:
+        # load the 1st document (up to '---') as yaml ...
+        frontmatter = loader.get_data()
+        # ... and the rest as plain text, to be parsed later, minus \x00 at the
+        # end added by the yaml parser as EOF
+        tests = loader.buffer[loader.pointer + 1 : -1]
+    finally:
+        loader.dispose()
 
-            if not v:
-                errors.append(
-                    Error(
-                        path,
-                        line_no,
-                        line,
-                        "line has no value",
-                    )
-                )
-                continue
+    if frontmatter is None:
+        frontmatter = {}
 
-            environment[k] = v
-        except Exception as ex:
-            errors.append(
-                Error(
-                    path,
-                    line_no,
-                    line,
-                    str(ex),
-                )
-            )
-
-    return environment, errors
+    return frontmatter, tests
 
 
-def parse_examples(path, lines: list[str]):
-    errors = []
-    keys = None
-    examples = []
-
-    if len(lines) <= 1:
-        return examples
-
-    for line_no, line in enumerate(lines, 1):
-        if line.startswith("#") or not line.strip():
-            continue
-
-        if keys is None:
-            keys = line.split()
-            continue
-
-        try:
-            values = line.split()
-
-            if len(values) != len(keys):
-                errors.append(
-                    Error(
-                        path,
-                        line_no,
-                        line,
-                        f"Number of values ({len(values)}) does not match"
-                        f"number of keys in header ({len(keys)})",
-                    )
-                )
-                continue
-
-            examples.append(dict(zip(keys, values)))
-        except Exception as ex:
-            errors.append(
-                Error(
-                    path,
-                    line_no,
-                    line,
-                    str(ex),
-                )
-            )
-
-    return examples, errors
-
-
-def parse(path: str, lines: list[str]) -> Specfile:
+def parse(path: str, stream: typing.IO) -> Specfile:
     specfile = Specfile(path)
 
-    env_path = specfile.path.with_suffix(".ispec.env")
+    frontmatter, tests = parse_yaml_multidoc(stream)
 
-    if env_path.exists():
-        environment, errors = parse_env(env_path, env_path.read_text().splitlines())
-        specfile.environment.update(environment)
-        specfile.errors.extend(errors)
+    specfile.examples = frontmatter.get("examples", [])
+    specfile.environment = frontmatter.get("environment", {})
 
-    examples_path = specfile.path.with_suffix(".ispec.examples")
-
-    if examples_path.exists():
-        examples, errors = parse_examples(
-            examples_path, examples_path.read_text().splitlines()
-        )
-        specfile.examples = examples
-        specfile.errors.extend(errors)
-
-    for line_no, line in enumerate(lines, 1):
+    for line_no, line in enumerate(tests.splitlines(), 1):
         # comment
         if line.startswith("#"):
             continue
@@ -246,9 +179,9 @@ def parse(path: str, lines: list[str]) -> Specfile:
                     )
                 )
             else:
-                included_specfile = parse(
-                    include_path, include_path.read_text().splitlines()
-                )
+                with open(include_path) as f:
+                    included_specfile = parse(include_path, f)
+
                 specfile.errors.extend(included_specfile.errors)
                 specfile.commands.extend(included_specfile.commands)
 

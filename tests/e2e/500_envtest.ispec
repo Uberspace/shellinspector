@@ -1,6 +1,10 @@
+---
+environment:
+  something: else
+  number: 1
+  number: 2
+---
 [@local]$ echo $something
 else
 [@local]$ echo $number
 2
-[@local]$ echo $quotetest
-'

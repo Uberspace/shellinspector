@@ -1,30 +1,82 @@
+from io import StringIO
 from pathlib import Path
 
 import pytest
+import yaml
 
 from shellinspector.parser import AssertMode
 from shellinspector.parser import Command
 from shellinspector.parser import ExecutionMode
 from shellinspector.parser import parse
+from shellinspector.parser import parse_yaml_multidoc
+
+
+def make_stream(lines, frontmatter=None):
+    if frontmatter:
+        frontmatter = yaml.safe_dump(frontmatter)
+        tests = "\n".join(lines)
+        result = f"---\n{frontmatter}\n---\n{tests}\n"
+    else:
+        result = "\n".join(lines) + "\n"
+
+    return StringIO(result)
+
+
+@pytest.mark.parametrize(
+    "input,frontmatter,tests",
+    [
+        (
+            "",
+            {},
+            "",
+        ),
+        (
+            "a\nb\nc",
+            {},
+            "a\nb\nc",
+        ),
+        (
+            "---\n{'a': 1}",
+            {"a": 1},
+            "",
+        ),
+        (
+            "---\n{'a': 1}\n---\na\nb\nc",
+            {"a": 1},
+            "a\nb\nc",
+        ),
+        (
+            "---\n\n---\n% echo ab\na\nb\n",
+            {},
+            "% echo ab\na\nb\n",
+        ),
+    ],
+)
+def test_parse_yaml_multidoc(input, frontmatter, tests):
+    rfrontmatter, rtests = parse_yaml_multidoc(StringIO(input))
+    assert rfrontmatter == frontmatter
+    assert rtests == tests
 
 
 def test_parse():
     specfile = parse(
         "/dev/null",
-        [
-            "[usr@]$ echo a",
-            "# ignored",
-            "a",
-            "$ echo b",
-            "b",
-            "% ls",
-            "file",
-            "dir",
-            "otherfile",
-            "%~ ls dir",
-            "file",
-            "! func()",
-        ],
+        make_stream(
+            [
+                "[usr@]$ echo a",
+                "# ignored",
+                "a",
+                "$ echo b",
+                "b",
+                "% ls",
+                "file",
+                "dir",
+                "otherfile",
+                "%~ ls dir",
+                "file",
+                "! func()",
+            ]
+        ),
     )
     commands, errors = (specfile.commands, specfile.errors)
 
@@ -68,11 +120,13 @@ def test_parse():
 def test_parse_whitespace_literal():
     specfile = parse(
         "/dev/null",
-        [
-            "% echo ab",
-            "a",
-            "b",
-        ],
+        make_stream(
+            [
+                "% echo ab",
+                "a",
+                "b",
+            ]
+        ),
     )
     commands, errors = (specfile.commands, specfile.errors)
 
@@ -85,11 +139,13 @@ def test_parse_whitespace_literal():
 def test_parse_whitespace_regex():
     specfile = parse(
         "/dev/null",
-        [
-            "%~ /usr/bin/which --help",
-            "Usage: /usr/bin/which [options] [--] COMMAND [...]",
-            "Write the full path of COMMAND",
-        ],
+        make_stream(
+            [
+                "%~ /usr/bin/which --help",
+                "Usage: /usr/bin/which [options] [--] COMMAND [...]",
+                "Write the full path of COMMAND",
+            ]
+        ),
     )
     commands, errors = (specfile.commands, specfile.errors)
 
@@ -106,10 +162,12 @@ def test_parse_whitespace_regex():
 def test_parse_error_no_user():
     specfile = parse(
         "/dev/null",
-        [
-            "$ echo a",
-            "a",
-        ],
+        make_stream(
+            [
+                "$ echo a",
+                "a",
+            ]
+        ),
     )
     _, errors = (specfile.commands, specfile.errors)
 
@@ -121,14 +179,16 @@ def test_parse_error():
     path = Path(__file__).parent / "virtual.ispec"
     specfile = parse(
         path,
-        [
-            "random text1",
-            "random text2",
-            "% ls1",
-            "file",
-            "% ls2",
-            "file",
-        ],
+        make_stream(
+            [
+                "random text1",
+                "random text2",
+                "% ls1",
+                "file",
+                "% ls2",
+                "file",
+            ]
+        ),
     )
     commands, errors = (specfile.commands, specfile.errors)
 
@@ -155,11 +215,13 @@ def test_parse_error_include():
     path = Path(__file__).parent / "virtual.ispec"
     specfile = parse(
         path,
-        [
-            "% ls1",
-            "file",
-            "<data/test_error.ispec",
-        ],
+        make_stream(
+            [
+                "% ls1",
+                "file",
+                "<data/test_error.ispec",
+            ]
+        ),
     )
     commands, errors = (specfile.commands, specfile.errors)
 
@@ -182,14 +244,16 @@ def test_parse_error_include():
 def test_user_reuse():
     specfile = parse(
         "/dev/null",
-        [
-            "[someuser@]$ ls",
-            "$ ls",
-            "% ls",
-            "$ ls",
-            "[someuser@somehost]$ ls",
-            "$ ls",
-        ],
+        make_stream(
+            [
+                "[someuser@]$ ls",
+                "$ ls",
+                "% ls",
+                "$ ls",
+                "[someuser@somehost]$ ls",
+                "$ ls",
+            ]
+        ),
     )
     commands, errors = (specfile.commands, specfile.errors)
 
@@ -210,7 +274,7 @@ def test_user_reuse():
 
 
 def test_empty():
-    specfile = parse("/dev/null", [])
+    specfile = parse("/dev/null", StringIO(""))
     commands, errors = (specfile.commands, specfile.errors)
     assert len(errors) == 0
     assert len(commands) == 0
@@ -271,7 +335,7 @@ def test_empty():
     ],
 )
 def test_variants(line, result):
-    specfile = parse("/dev/null", [line])
+    specfile = parse("/dev/null", make_stream([line]))
     commands, errors = (specfile.commands, specfile.errors)
 
     assert len(errors) == 0
@@ -285,13 +349,15 @@ def test_include():
     path = Path(__file__).parent / "virtual.ispec"
     specfile = parse(
         path,
-        [
-            "% ls",
-            "file",
-            "<data/test.ispec",
-            "% ls",
-            "file",
-        ],
+        make_stream(
+            [
+                "% ls",
+                "file",
+                "<data/test.ispec",
+                "% ls",
+                "file",
+            ]
+        ),
     )
     commands, errors = (specfile.commands, specfile.errors)
 
@@ -316,24 +382,49 @@ def test_include():
 
 
 def test_environment():
-    path = Path(__file__).parent / "e2e/500_envtest.ispec"
-    specfile = parse(path, [])
+    path = Path(__file__).parent / "virtual.ispec"
+    specfile = parse(
+        path,
+        make_stream(
+            [
+                "---",
+                "environment:",
+                "  # comment",
+                "  something: else",
+                "  withspace  :   with space",
+                "  number: 1",
+                "  number: 2",
+                "---",
+            ]
+        ),
+    )
 
     assert len(specfile.errors) == 0
 
     assert specfile.environment == {
         "something": "else",
         "withspace": "with space",
-        "valuewithequals": "e=quals",
         # provided twice, last value counts
-        "number": "2",
-        "quotetest": "'",
+        "number": 2,
     }
 
 
 def test_examples():
-    path = Path(__file__).parent / "e2e/600_examplestest.ispec"
-    specfile = parse(path, [])
+    path = Path(__file__).parent / "virtual.ispec"
+    specfile = parse(
+        path,
+        make_stream(
+            [
+                "---",
+                "examples:",
+                '  - PY_VERSION: "3.10"',
+                '    PY_COMMAND: "python3.10"',
+                '  - PY_VERSION: "3.11"',
+                '    PY_COMMAND: "python3.11"',
+                "---",
+            ]
+        ),
+    )
 
     assert len(specfile.errors) == 0
 
@@ -353,13 +444,15 @@ def test_include_missing_file():
     path = Path(__file__).parent / "virtual.ispec"
     specfile = parse(
         path,
-        [
-            "% ls",
-            "file",
-            "<data/test_not_existent.ispec",
-            "% ls",
-            "file",
-        ],
+        make_stream(
+            [
+                "% ls",
+                "file",
+                "<data/test_not_existent.ispec",
+                "% ls",
+                "file",
+            ]
+        ),
     )
 
     assert len(specfile.errors) == 1

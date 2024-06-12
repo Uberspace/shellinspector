@@ -46,10 +46,10 @@ def parse_spec_file(path):
 
     if not spec_file.exists():
         LOGGER.error("file %s does not exist", spec_file)
-        return False
+        return None
 
-    lines = spec_file.read_text().splitlines()
-    specfile = parse(spec_file, lines)
+    with open(spec_file) as f:
+        specfile = parse(spec_file, f)
 
     for i, command in enumerate(specfile.commands):
         LOGGER.debug("command[%s]: %s", i, command.short)
@@ -63,8 +63,6 @@ def parse_spec_file(path):
                 error.source_line,
                 error.message,
             )
-
-        return False
 
     return specfile
 
@@ -89,6 +87,9 @@ def run(target_host, spec_file_paths, identity, verbose):
 
     for spec_file_path in spec_file_paths:
         spec_file = parse_spec_file(spec_file_path)
+
+        if spec_file is None or spec_file.errors:
+            continue
 
         if spec_file.examples:
             for example in spec_file.examples:

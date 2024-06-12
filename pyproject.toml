@@ -25,6 +25,7 @@ classifiers = [
 dependencies = [
   "pexpect==4.8.0",
   "termcolor==2.2.0",
+  "PyYAML==6.0.1",
 ]
 dynamic = ["version"]
 
