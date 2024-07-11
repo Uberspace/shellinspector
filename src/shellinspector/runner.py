@@ -198,16 +198,16 @@ def disable_color():
         del os.environ["TERM"]
 
 
-def get_ssh_session(ssh_config):
+def get_ssh_session(ssh_config, timeout_seconds):
     with disable_color():
-        shell = RemoteShell(timeout=5)
+        shell = RemoteShell(timeout=timeout_seconds)
         shell.login(**ssh_config)
         return shell
 
 
-def get_localshell():
+def get_localshell(timeout_seconds):
     with disable_color():
-        shell = LocalShell(timeout=5)
+        shell = LocalShell(timeout=timeout_seconds)
         shell.login()
         return shell
 
@@ -258,7 +258,7 @@ class ShellRunner:
                 f"Session could not be closed, because it doesn't exist, command: {cmd}"
             )
 
-    def _get_session(self, cmd):
+    def _get_session(self, cmd, timeout_seconds):
         """
         Create or reuse a shell session used to run the given command.
 
@@ -286,7 +286,7 @@ class ShellRunner:
             LOGGER.debug("creating session: %s", key)
             if cmd.host == "local":
                 LOGGER.debug("new local shell session")
-                session = self.sessions[key] = get_localshell()
+                session = self.sessions[key] = get_localshell(timeout_seconds)
             else:
                 ssh_config = {
                     **self.ssh_config,
@@ -295,7 +295,9 @@ class ShellRunner:
                     "port": self.ssh_config["port"],
                 }
                 LOGGER.debug("connecting via SSH: %s", ssh_config)
-                session = self.sessions[key] = get_ssh_session(ssh_config)
+                session = self.sessions[key] = get_ssh_session(
+                    ssh_config, timeout_seconds
+                )
 
             if logging.root.level == logging.DEBUG:
                 # use .buffer here, because pexpect wants to write bytes, not strs
@@ -390,7 +392,7 @@ class ShellRunner:
         try:
             for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
-                session = self._get_session(cmd)
+                session = self._get_session(cmd, specfile.settings.timeout_seconds)
 
                 if cmd.execution_mode == ExecutionMode.PYTHON:
                     ctx = ShellinspectorPyContext({}, {})

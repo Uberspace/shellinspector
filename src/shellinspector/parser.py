@@ -1,7 +1,7 @@
+import dataclasses
 import re
 import typing
-from dataclasses import dataclass
-from dataclasses import replace
+from contextlib import suppress
 from enum import Enum
 from pathlib import Path
 
@@ -20,7 +20,7 @@ class AssertMode(Enum):
     IGNORE = "_"
 
 
-@dataclass
+@dataclasses.dataclass
 class Command:
     execution_mode: ExecutionMode
     command: str
@@ -46,7 +46,7 @@ class Command:
         return f"{self.execution_mode.name}({self.user}@{self.host}) `{self.command}` (expect {self.line_count} lines, {self.assert_mode.name})"
 
 
-@dataclass
+@dataclasses.dataclass
 class Error:
     source_file: Path
     source_line_no: int
@@ -54,7 +54,15 @@ class Error:
     message: str
 
 
-@dataclass
+@dataclasses.dataclass
+class Settings:
+    timeout_seconds: int
+
+    def __init__(self, timeout_seconds=5):
+        self.timeout_seconds = timeout_seconds
+
+
+@dataclasses.dataclass
 class Specfile:
     path: Path
     commands: list[Command]
@@ -62,6 +70,7 @@ class Specfile:
     environment: dict[str, str]
     examples: list[dict[str, str]]
     applied_example: dict
+    settings: Settings
 
     def __init__(
         self, path, commands=None, errors=None, environment=None, examples=None
@@ -72,12 +81,13 @@ class Specfile:
         self.environment = environment or {}
         self.examples = examples or []
         self.applied_example = None
+        self.settings = Settings()
 
     def copy(self):
         return Specfile(
             self.path,
-            [replace(c) for c in self.commands],
-            [replace(e) for e in self.errors],
+            [dataclasses.replace(c) for c in self.commands],
+            [dataclasses.replace(e) for e in self.errors],
             self.environment.copy(),
             [e.copy() for e in self.examples],
         )
@@ -273,6 +283,15 @@ def parse(path: str, stream: typing.IO) -> Specfile:
             value = config.get(key, None)
 
         setattr(specfile, key, value)
+
+    frontmatter_settings = frontmatter.get("settings", {})
+    global_settings = config.get("settings", {})
+
+    for key in dataclasses.fields(specfile.settings):
+        with suppress(LookupError):
+            setattr(specfile.settings, key.name, global_settings[key.name])
+        with suppress(LookupError):
+            setattr(specfile.settings, key.name, frontmatter_settings[key.name])
 
     parse_commands(specfile, commands)
 

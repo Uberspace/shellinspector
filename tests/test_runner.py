@@ -203,14 +203,14 @@ def test_remoteshell_get_environment(ssh_config):
 
 
 def test_get_localshell():
-    shell = get_localshell()
+    shell = get_localshell(5)
     shell.sendline("echo a")
     assert shell.prompt(), shell.before
     assert shell.before.decode() == "a\r\n"
 
 
 def test_get_ssh_session(ssh_config):
-    shell = get_ssh_session(ssh_config)
+    shell = get_ssh_session(ssh_config, 5)
     shell.sendline("echo a")
     assert shell.prompt(), shell.before
     assert shell.before.decode() == "a\r\n"
@@ -245,7 +245,39 @@ def command_local_echo_literal():
         None,
         "local",
         AssertMode.LITERAL,
+        "a\n",
+        "/some.ispec",
+        1,
+        "$ echo a",
+    )
+
+
+@pytest.fixture
+def command_local_echo_literal_fail():
+    return Command(
+        ExecutionMode.USER,
+        "echo a",
+        None,
+        None,
+        "local",
+        AssertMode.LITERAL,
         "a",
+        "/some.ispec",
+        1,
+        "$ echo a",
+    )
+
+
+@pytest.fixture
+def command_remote_echo_literal():
+    return Command(
+        ExecutionMode.ROOT,
+        "echo a",
+        "root",
+        None,
+        "remote",
+        AssertMode.LITERAL,
+        "a\n",
         "/some.ispec",
         1,
         "$ echo a",
@@ -289,7 +321,7 @@ def command_local_echo_ignore():
     (
         # LITERAL
         (
-            lazy_fixture("command_local_echo_literal"),
+            lazy_fixture("command_local_echo_literal_fail"),
             ["a", 0],
             True,
             [
@@ -304,7 +336,7 @@ def command_local_echo_ignore():
         ),
         # LITERAL & FAIL-Tests
         (
-            lazy_fixture("command_local_echo_literal"),
+            lazy_fixture("command_local_echo_literal_fail"),
             ["b", 0],
             False,
             [
@@ -319,7 +351,7 @@ def command_local_echo_ignore():
             ],
         ),
         (
-            lazy_fixture("command_local_echo_literal"),
+            lazy_fixture("command_local_echo_literal_fail"),
             ["a", 1],
             False,
             [
@@ -334,7 +366,7 @@ def command_local_echo_ignore():
             ],
         ),
         (
-            lazy_fixture("command_local_echo_literal"),
+            lazy_fixture("command_local_echo_literal_fail"),
             ["b", 1],
             False,
             [
@@ -466,7 +498,7 @@ def test_get_session(make_runner, ssh_config, user, host, expected_class):
         "$ echo a",
     )
 
-    session1 = runner._get_session(cmd)
+    session1 = runner._get_session(cmd, 5)
 
     assert isinstance(session1, expected_class)
 
@@ -474,15 +506,15 @@ def test_get_session(make_runner, ssh_config, user, host, expected_class):
     assert session1.prompt()
     assert session1.before.decode().strip() == "a"
 
-    session2 = runner._get_session(cmd)
+    session2 = runner._get_session(cmd, 5)
     assert id(session1) == id(session2)
 
     cmd.session_name = "a"
 
-    session3 = runner._get_session(cmd)
+    session3 = runner._get_session(cmd, 5)
     assert id(session1) != id(session3)
 
-    session4 = runner._get_session(cmd)
+    session4 = runner._get_session(cmd, 5)
     assert id(session3) == id(session4)
 
 
@@ -503,7 +535,31 @@ def test_get_session_unknown_host(make_runner, ssh_config):
     )
 
     with pytest.raises(Exception, match="Unknown host: xxx.*"):
-        runner._get_session(cmd)
+        runner._get_session(cmd, 5)
+
+
+def test_timeout_setting(
+    make_runner, ssh_config, command_local_echo_literal, command_remote_echo_literal
+):
+    runner, events = make_runner(ssh_config)
+
+    specfile = Specfile("virtual.ispec")
+    specfile.commands = [command_local_echo_literal, command_remote_echo_literal]
+
+    runner.run(specfile)
+
+    for event in events:
+        assert event[0][0] in (
+            RunnerEvent.COMMAND_STARTING,
+            RunnerEvent.COMMAND_PASSED,
+            RunnerEvent.RUN_SUCCEEDED,
+        ), event
+
+    sessions = list(runner.sessions.values())
+    assert len(sessions) == 2
+
+    for session in sessions:
+        assert session.timeout == 5
 
 
 def test_logout(make_runner, ssh_config):
@@ -751,7 +807,7 @@ class FakeSession(RemoteShell):
 )
 def test_run_command(
     make_runner,
-    command_local_echo_literal,
+    command_local_echo_literal_fail,
     prompt_works,
     actual_output,
     expected_result,
@@ -759,14 +815,14 @@ def test_run_command(
 ):
     session = FakeSession(prompt_works, actual_output)
     runner, events = make_runner()
-    result = runner._run_command(session, command_local_echo_literal)
+    result = runner._run_command(session, command_local_echo_literal_fail)
     assert result == expected_result, events
 
     assert len(events) == len(expected_events)
 
     for i in range(len(events)):
         assert events[i][0][0] == expected_events[i][0]
-        assert events[i][0][1] == command_local_echo_literal
+        assert events[i][0][1] == command_local_echo_literal_fail
         assert events[i][1] == expected_events[i][1]
 
 
@@ -805,7 +861,7 @@ def test_run_command(
 )
 def test_run1(
     make_runner,
-    command_local_echo_literal,
+    command_local_echo_literal_fail,
     prompt_works,
     actual_output,
     expected_result,
@@ -813,9 +869,9 @@ def test_run1(
 ):
     runner, events = make_runner()
     session = FakeSession(prompt_works, actual_output)
-    runner._get_session = lambda cmd: session
+    runner._get_session = lambda cmd, timeout: session
     specfile = Specfile("virtual.ispec")
-    specfile.commands = [command_local_echo_literal]
+    specfile.commands = [command_local_echo_literal_fail]
 
     result = runner.run(specfile)
     assert result == expected_result, events

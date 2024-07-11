@@ -537,3 +537,4 @@ def test_global_config_default():
 
     assert specfile.environment == {"FROM_CONFIG": 1}
     assert specfile.examples == [{"FROM_CONFIG": 1}]
+    assert specfile.settings.timeout_seconds == 99
