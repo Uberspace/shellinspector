@@ -8,6 +8,7 @@ from shellinspector.parser import AssertMode
 from shellinspector.parser import Command
 from shellinspector.parser import ExecutionMode
 from shellinspector.parser import parse
+from shellinspector.parser import parse_global_config
 from shellinspector.parser import parse_yaml_multidoc
 
 
@@ -489,3 +490,50 @@ def test_command_short_regex():
         "$ echo a\nb",
     )
     assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, REGEX)"
+
+
+@pytest.mark.parametrize(
+    "ispec_path,expected_cfg",
+    [
+        ("with_dotgit_1/tests/some.ispec", {"with_dotgit_1": True}),
+        ("with_dotgit_2/tests/some.ispec", {}),
+        ("same_dir/tests/some.ispec", {"same_dir": True}),
+        ("none/tests/some.ispec", {}),
+        ("/dev/null", {}),
+    ],
+)
+def test_parse_global_config(ispec_path, expected_cfg):
+    cfg = parse_global_config(
+        Path(__file__).parent / "fixtures/parse_global_config" / ispec_path
+    )
+
+    assert cfg == expected_cfg
+
+
+def test_global_config_combine():
+    specfile = parse(
+        Path(__file__).parent / "fixtures/parse_global_config/combine/some.ispec",
+        make_stream(
+            [
+                "---",
+                "environment:",
+                "    FROM_ISPEC: 1",
+                "examples:",
+                "    - FROM_ISPEC: 1",
+                "---",
+            ]
+        ),
+    )
+
+    assert specfile.environment == {"FROM_ISPEC": 1}
+    assert specfile.examples == [{"FROM_ISPEC": 1}]
+
+
+def test_global_config_default():
+    specfile = parse(
+        Path(__file__).parent / "fixtures/parse_global_config/combine/some.ispec",
+        make_stream(["---", "---"]),
+    )
+
+    assert specfile.environment == {"FROM_CONFIG": 1}
+    assert specfile.examples == [{"FROM_CONFIG": 1}]

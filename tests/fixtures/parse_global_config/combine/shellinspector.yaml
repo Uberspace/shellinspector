@@ -1,0 +1,5 @@
+---
+environment:
+  FROM_CONFIG: 1
+examples:
+  - FROM_CONFIG: 1

@@ -240,13 +240,39 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
             cmd.expected = cmd.expected.rstrip("\n")
 
 
+def parse_global_config(ispec_path: str):
+    search_path = Path(ispec_path)
+
+    while str(search_path) != search_path.root:
+        search_path = Path(search_path).parent
+
+        try:
+            with open(search_path / "shellinspector.yaml") as f:
+                return yaml.safe_load(f)
+        except FileNotFoundError:
+            pass
+
+        if (search_path / ".git").exists():
+            break
+
+    return {}
+
+
 def parse(path: str, stream: typing.IO) -> Specfile:
     specfile = Specfile(path)
 
+    config = parse_global_config(path)
+
     frontmatter, commands = parse_yaml_multidoc(stream)
 
-    specfile.examples = frontmatter.get("examples", [])
-    specfile.environment = frontmatter.get("environment", {})
+    # use values in frontmatter if they exist, otherwise use global config
+    for key in ["examples", "environment"]:
+        try:
+            value = frontmatter[key]
+        except LookupError:
+            value = config.get(key, None)
+
+        setattr(specfile, key, value)
 
     parse_commands(specfile, commands)
 

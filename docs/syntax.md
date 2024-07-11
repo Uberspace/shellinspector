@@ -17,10 +17,32 @@ PASS % whoami
 PASS % pwd
 ```
 
+## Config File
+
+Shellinspector can be configured within a project using a file called
+`shellinspector.yaml` somewhere up the directory tree relative to your `.ispec`
+file. Only the first/nearest config file found will be considered. The search is
+also stopped, if a `.git` directory is found, assuming this is the project root.
+
+You can use all settings available in Frontmatter here.
+
+```
+fixture_dirs:
+  - fixtures/
+include_dirs:
+  - includes/
+settings:
+  timeout_seconds: 10
+```
+
+All given relative paths are relative to the `shellinspector.yaml` file itself.
+
 ## Frontmatter
 
 Shellinspector can be configured in various ways outlined below. These config
-values are set using an optional YAML section at the start of the file.
+values are set using an optional YAML section at the start of the file. This
+takes precedence over the values provided in the config file. The `settings`
+dict gets merged, all other values are overwritten completely.
 
 ```
 ---
