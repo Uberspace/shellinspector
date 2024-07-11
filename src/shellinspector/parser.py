@@ -282,7 +282,8 @@ def parse(path: str, stream: typing.IO) -> Specfile:
         except LookupError:
             value = config.get(key, None)
 
-        setattr(specfile, key, value)
+        if value is not None:
+            setattr(specfile, key, value)
 
     frontmatter_settings = frontmatter.get("settings", {})
     global_settings = config.get("settings", {})
