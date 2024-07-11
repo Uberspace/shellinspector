@@ -504,10 +504,8 @@ def test_command_short_regex():
 )
 def test_parse_global_config(ispec_path, expected_cfg):
     git_dirs = [
-        Path(__file__).parent
-        / "fixtures/fixtures/parse_global_config/with_dotgit_2/tests/.git",
-        Path(__file__).parent
-        / "fixtures/fixtures/parse_global_config/with_dotgit_1/.git",
+        Path(__file__).parent / "fixtures/parse_global_config/with_dotgit_2/tests/.git",
+        Path(__file__).parent / "fixtures/parse_global_config/with_dotgit_1/.git",
     ]
 
     for git_dir in git_dirs:
