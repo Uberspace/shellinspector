@@ -17,7 +17,23 @@ PASS % whoami
 PASS % pwd
 ```
 
-## Syntax
+## Frontmatter
+
+Shellinspector can be configured in various ways outlined below. These config
+values are set using an optional YAML section at the start of the file.
+
+```
+---
+environment:
+  A: B
+---
+% whoami
+root
+% pwd
+/root
+```
+
+## Test Syntax
 
 All lines (except expected output) start with a prefix character (`P`), followed
 by arguments (`command`). The following lines specify an expected output
@@ -198,41 +214,36 @@ $ test -d /etc/nonexistant || true
 
 ## Environment
 
-To prepare the test envrionment, create a file called `test.ispec.env` next to
-`test.ispec`:
+To set envrionment variables for this test run, add an `envrionment` key to the
+frontmatter:
 
 `test.ispec`:
 
 ```
+---
+environment:
+  DNS_SERVER: 1.1.1.1
+---
 $ echo $DNS_SERVER
 1.1.1.1
 ```
 
-`test.ispec.env`:
-
-```
-# which DNS server to test
-DNS_SERVER=1.1.1.1
-```
-
 ## Parametrized tests
 
-To run many similar tests, create a file called `test.ispec.examples` next to
-`test.ispec`:
+To run many similar tests, add an `examples` key to the frontmatter:
 
 `test.ispec`:
 
 ```
+---
+examples:
+  - PY_EXE: python3.11
+    PY_VERSION: 3.11
+  - PY_EXE: python3.13
+    PY_VERSION: 3.13
+---
 $~ {PY_EXE} --version
 {PY_VERSION}
-```
-
-`test.ispec.examples`
-
-```
-PY_EXE        PY_VERSION
-python3.10    3.10
-python3.11    3.11
 ```
 
 ## Python code
