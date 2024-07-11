@@ -126,27 +126,20 @@ def parse_yaml_multidoc(stream: typing.IO) -> tuple[str, str]:
     try:
         # load the 1st document (up to '---') as yaml ...
         frontmatter = loader.get_data()
-        # ... and the rest as plain text, to be parsed later, minus \x00 at the
-        # end added by the yaml parser as EOF
-        tests = loader.buffer[loader.pointer + 1 : -1]
+        # ... and the rest as plain text, to be parsed later,
+        # minus \x00 at the end added by the yaml parser as EOF
+        commands = loader.buffer[loader.pointer + 1 : -1]
     finally:
         loader.dispose()
 
     if frontmatter is None:
         frontmatter = {}
 
-    return frontmatter, tests
+    return frontmatter, commands
 
 
-def parse(path: str, stream: typing.IO) -> Specfile:
-    specfile = Specfile(path)
-
-    frontmatter, tests = parse_yaml_multidoc(stream)
-
-    specfile.examples = frontmatter.get("examples", [])
-    specfile.environment = frontmatter.get("environment", {})
-
-    for line_no, line in enumerate(tests.splitlines(), 1):
+def parse_commands(specfile: Specfile, commands: str) -> None:
+    for line_no, line in enumerate(commands.splitlines(), 1):
         # comment
         if line.startswith("#"):
             continue
@@ -169,7 +162,13 @@ def parse(path: str, stream: typing.IO) -> Specfile:
         if line.startswith("<"):
             include_path = (specfile.path.parent / line[1:]).resolve()
 
-            if not include_path.exists():
+            try:
+                with open(include_path) as f:
+                    included_specfile = parse(include_path, f)
+
+                specfile.errors.extend(included_specfile.errors)
+                specfile.commands.extend(included_specfile.commands)
+            except FileNotFoundError:
                 specfile.errors.append(
                     Error(
                         specfile.path,
@@ -178,16 +177,9 @@ def parse(path: str, stream: typing.IO) -> Specfile:
                         f"include error: {include_path} does not exist",
                     )
                 )
-            else:
-                with open(include_path) as f:
-                    included_specfile = parse(include_path, f)
-
-                specfile.errors.extend(included_specfile.errors)
-                specfile.commands.extend(included_specfile.commands)
-
             continue
 
-        # start of command
+        # start of a new command
         if prefix:
             command = line[prefix.span()[1] :]
             user, session_name, host, execution_mode, assert_mode = prefix.group(
@@ -202,6 +194,7 @@ def parse(path: str, stream: typing.IO) -> Specfile:
             if execution_mode == ExecutionMode.ROOT:
                 user = "root"
 
+            # reuse user and host from last command if not specified
             try:
                 last_command = next(
                     cmd
@@ -231,7 +224,7 @@ def parse(path: str, stream: typing.IO) -> Specfile:
             if not user and execution_mode == ExecutionMode.USER and host != "local":
                 specfile.errors.append(
                     Error(
-                        path,
+                        specfile.path,
                         line_no,
                         line,
                         "syntax error: command (and all before it) do not have a user specified",
@@ -245,5 +238,16 @@ def parse(path: str, stream: typing.IO) -> Specfile:
         if cmd.assert_mode == AssertMode.REGEX:
             # remove trailing new lines for regexes, see syntax.md
             cmd.expected = cmd.expected.rstrip("\n")
+
+
+def parse(path: str, stream: typing.IO) -> Specfile:
+    specfile = Specfile(path)
+
+    frontmatter, commands = parse_yaml_multidoc(stream)
+
+    specfile.examples = frontmatter.get("examples", [])
+    specfile.environment = frontmatter.get("environment", {})
+
+    parse_commands(specfile, commands)
 
     return specfile
