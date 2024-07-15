@@ -20,7 +20,12 @@ def get_vagrant_sshport():
         return None
 
     content = inventory_file.read_text()
-    return int(re.search("ansible_port=([0-9]+)", content)[1])
+    port = re.search("ansible_port=([0-9]+)", content)
+    if not port:
+        raise Exception(
+            "vagrant_ansible_inventory is invalid, could not find ansible_port"
+        )
+    return int(port[1])
 
 
 def get_ssh_config(target_host):
