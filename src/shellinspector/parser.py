@@ -58,10 +58,12 @@ class Error:
 class Settings:
     timeout_seconds: int
     include_dirs: list[Path]
+    fixture_dirs: list[Path]
 
     def __init__(self, timeout_seconds=5):
         self.timeout_seconds = timeout_seconds
         self.include_dirs = []
+        self.fixture_dirs = []
 
 
 @dataclasses.dataclass
@@ -71,6 +73,9 @@ class Specfile:
     errors: list[Error]
     environment: dict[str, str]
     examples: list[dict[str, str]]
+    fixture: typing.Optional[str]
+    fixture_specfile_pre: typing.Optional["Specfile"]
+    fixture_specfile_post: typing.Optional["Specfile"]
     applied_example: dict
     settings: Settings
 
@@ -82,6 +87,9 @@ class Specfile:
         self.errors = errors or []
         self.environment = environment or {}
         self.examples = examples or []
+        self.fixture = None
+        self.fixture_specfile_pre = None
+        self.fixture_specfile_post = None
         self.applied_example = None
         self.settings = Settings()
 
@@ -150,6 +158,31 @@ def parse_yaml_multidoc(stream: typing.IO) -> tuple[dict, str]:
     return frontmatter, commands
 
 
+def include_file(
+    specfile: Specfile, line_no, line, dirs: list[Path], file_path: Path
+) -> typing.Optional[Specfile]:
+    for include_dir in dirs:
+        include_path = (include_dir / file_path).resolve()
+
+        try:
+            with open(include_path) as f:
+                return parse(include_path, f)
+        except FileNotFoundError:
+            continue
+
+        break
+    else:
+        dirs_str = [str(d) for d in dirs]
+        specfile.errors.append(
+            Error(
+                specfile.path,
+                line_no,
+                line,
+                f"error: {file_path} does not exist in any directory: {','.join(dirs_str)}",
+            )
+        )
+
+
 def parse_commands(specfile: Specfile, commands: str) -> None:
     for line_no, line in enumerate(commands.splitlines(), 1):
         # comment
@@ -172,29 +205,12 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
 
         # include
         if line.startswith("<"):
-            for include_dir in specfile.settings.include_dirs:
-                include_path = (include_dir / line[1:]).resolve()
-
-                try:
-                    with open(include_path) as f:
-                        included_specfile = parse(include_path, f)
-                except FileNotFoundError:
-                    continue
-
+            included_specfile = include_file(
+                specfile, line_no, line, specfile.settings.include_dirs, Path(line[1:])
+            )
+            if included_specfile:
                 specfile.errors.extend(included_specfile.errors)
                 specfile.commands.extend(included_specfile.commands)
-                break
-            else:
-                include_dirs = [str(d) for d in specfile.settings.include_dirs]
-                specfile.errors.append(
-                    Error(
-                        specfile.path,
-                        line_no,
-                        line,
-                        f"include error: {line[1:]} does not exist in any include directory: {','.join(include_dirs)}",
-                    )
-                )
-
             continue
 
         # start of a new command
@@ -287,7 +303,7 @@ def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
     frontmatter, commands = parse_yaml_multidoc(stream)
 
     # use values in frontmatter if they exist, otherwise use global config
-    for key in ["examples", "environment"]:
+    for key in ["examples", "environment", "fixture"]:
         try:
             value = frontmatter[key]
         except LookupError:
@@ -299,7 +315,7 @@ def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
     frontmatter_settings = frontmatter.get("settings", {})
     global_settings = config.get("settings", {})
 
-    path_setting_keys = ["include_dirs"]
+    path_setting_keys = ["include_dirs", "fixture_dirs"]
 
     for key in dataclasses.fields(specfile.settings):
         value = None
@@ -322,6 +338,24 @@ def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
 
         setattr(specfile.settings, key.name, value)
 
+    if specfile.fixture:
+        specfile.fixture_specfile_pre = include_file(
+            specfile,
+            0,
+            "fixture_pre",
+            specfile.settings.fixture_dirs,
+            Path(f"{specfile.fixture}_pre.ispec"),
+        )
+
     parse_commands(specfile, commands)
+
+    if specfile.fixture:
+        specfile.fixture_specfile_post = include_file(
+            specfile,
+            0,
+            "fixture_post",
+            specfile.settings.fixture_dirs,
+            Path(f"{specfile.fixture}_post.ispec"),
+        )
 
     return specfile

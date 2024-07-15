@@ -17,6 +17,7 @@ from pexpect.pxssh import ExceptionPxssh
 
 from shellinspector.parser import AssertMode
 from shellinspector.parser import ExecutionMode
+from shellinspector.parser import Specfile
 
 LOGGER = logging.getLogger(Path(__file__).name)
 
@@ -386,10 +387,16 @@ class ShellRunner:
 
         return self._check_result(cmd, command_output, int(rc_output))
 
-    def run(self, specfile):
-        used_sessions = set()
+    def run(self, specfile: Specfile, outer_used_sessions=None):
+        if outer_used_sessions:
+            used_sessions = outer_used_sessions
+        else:
+            used_sessions = set()
 
         try:
+            if specfile.fixture_specfile_pre:
+                self.run(specfile.fixture_specfile_pre, used_sessions)
+
             for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
                 session = self._get_session(cmd, specfile.settings.timeout_seconds)
@@ -419,6 +426,10 @@ class ShellRunner:
                             RunnerEvent.COMMAND_FAILED, None, {"message": result}
                         )
                         self.report(RunnerEvent.RUN_FAILED, None, {})
+
+                        if specfile.fixture_specfile_post:
+                            self.run(specfile.fixture_specfile_post, used_sessions)
+
                         return False
                 else:
                     if cmd.command == "logout":
@@ -439,10 +450,19 @@ class ShellRunner:
 
                     if not self._run_command(session, cmd):
                         self.report(RunnerEvent.RUN_FAILED, None, {})
+
+                        if specfile.fixture_specfile_post:
+                            self.run(specfile.fixture_specfile_post, used_sessions)
+
                         return False
+
+            if specfile.fixture_specfile_post:
+                self.run(specfile.fixture_specfile_post, used_sessions)
+
         finally:
-            for session in used_sessions:
-                session.pop_state()
+            if not outer_used_sessions:
+                for session in used_sessions:
+                    session.pop_state()
 
         self.report(RunnerEvent.RUN_SUCCEEDED, None, {})
 

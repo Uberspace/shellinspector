@@ -7,3 +7,5 @@ settings:
   timeout_seconds: 99
   include_dirs:
     - ../includes
+  fixture_dirs:
+    - ../fixtures

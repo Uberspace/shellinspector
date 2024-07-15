@@ -514,15 +514,16 @@ def test_command_short_regex():
 )
 def test_parse_global_config(ispec_path, expected_cfg):
     git_dirs = [
-        Path(__file__).parent / "fixtures/parse_global_config/with_dotgit_2/tests/.git",
-        Path(__file__).parent / "fixtures/parse_global_config/with_dotgit_1/.git",
+        Path(__file__).parent
+        / "config_tests/parse_global_config/with_dotgit_2/tests/.git",
+        Path(__file__).parent / "config_tests/parse_global_config/with_dotgit_1/.git",
     ]
 
     for git_dir in git_dirs:
         git_dir.touch()
 
     cfg, cfg_path = parse_global_config(
-        Path(__file__).parent / "fixtures/parse_global_config" / ispec_path
+        Path(__file__).parent / "config_tests/parse_global_config" / ispec_path
     )
 
     assert cfg == expected_cfg
@@ -530,7 +531,7 @@ def test_parse_global_config(ispec_path, expected_cfg):
 
 def test_global_config_combine():
     specfile = parse(
-        Path(__file__).parent / "fixtures/parse_global_config/combine/some.ispec",
+        Path(__file__).parent / "config_tests/parse_global_config/combine/some.ispec",
         make_stream(
             [
                 "---",
@@ -549,7 +550,7 @@ def test_global_config_combine():
 
 def test_global_config_default():
     specfile = parse(
-        Path(__file__).parent / "fixtures/parse_global_config/combine/some.ispec",
+        Path(__file__).parent / "config_tests/parse_global_config/combine/some.ispec",
         make_stream(["---", "---"]),
     )
 
@@ -557,6 +558,30 @@ def test_global_config_default():
     assert specfile.examples == [{"FROM_CONFIG": 1}]
     assert specfile.settings.timeout_seconds == 99
     assert specfile.settings.include_dirs == [
-        Path(__file__).parent / "fixtures/parse_global_config/includes",
-        Path(__file__).parent / "fixtures/parse_global_config/combine",
+        Path(__file__).parent / "config_tests/parse_global_config/includes",
+        Path(__file__).parent / "config_tests/parse_global_config/combine",
     ]
+    assert specfile.settings.fixture_dirs == [
+        Path(__file__).parent / "config_tests/parse_global_config/fixtures",
+        Path(__file__).parent / "config_tests/parse_global_config/combine",
+    ]
+
+
+def test_fixture():
+    specfile = parse(
+        Path(__file__).parent / "some.ispec",
+        make_stream(
+            [
+                "---",
+                "fixture: e2e/fixtures/create_user",
+                "---",
+            ]
+        ),
+    )
+
+    assert specfile.fixture == "e2e/fixtures/create_user"
+    assert not specfile.errors, specfile.errors
+    assert specfile.fixture_specfile_pre
+    assert len(specfile.fixture_specfile_pre.commands) == 1
+    assert specfile.fixture_specfile_post
+    assert len(specfile.fixture_specfile_post.commands) == 1

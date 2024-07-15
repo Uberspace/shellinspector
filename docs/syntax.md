@@ -27,12 +27,12 @@ also stopped, if a `.git` directory is found, assuming this is the project root.
 You can use all settings available in Frontmatter here.
 
 ```
-fixture_dirs:
-  - fixtures/
 settings:
   timeout_seconds: 10
   include_dirs:
     - includes/
+  fixture_dirs:
+    - fixtures/
 ```
 
 All given relative paths are relative to the `shellinspector.yaml` file itself.
@@ -69,6 +69,38 @@ expected
 output
 ...
 ```
+
+## Fixtures
+
+This setting can be used to define a set of commands that are run before and
+after the actual test commands. The fixture is defined in two separate files,
+e.g. `fixtures/user_create_pre.ispec` and `fixtures/user_create_post.ispec`.
+You can then use the fixture like so, in `test.ispec`:
+
+`_pre`:
+
+```
+% useradd testuser
+```
+
+`_post`:
+
+```
+% userdel testuser
+```
+
+```
+---
+fixture: user_create
+settings:
+  fixture_dirs:
+    - fixtures/
+---
+% test -d /home/testuser
+```
+
+The `_pre` fixture is run before the first command in `test.ispec`, the `_post`
+fixture is run after the last command, even if something failed.
 
 ### Run commands
 

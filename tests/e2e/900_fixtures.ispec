@@ -1,0 +1,8 @@
+---
+fixture: create_user
+settings:
+  fixture_dirs:
+    - fixtures
+---
+%~ id create_user
+create_user
