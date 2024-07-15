@@ -3,6 +3,7 @@ settings:
   include_dirs:
     - includes
 ---
+<early_dir_include.ispec
 % cat /tmp/include || true
 cat: can't open '/tmp/include': No such file or directory
 <dir_include.ispec

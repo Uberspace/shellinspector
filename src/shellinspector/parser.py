@@ -189,6 +189,16 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
         if line.startswith("#"):
             continue
 
+        # include
+        if line.startswith("<"):
+            included_specfile = include_file(
+                specfile, line_no, line, specfile.settings.include_dirs, Path(line[1:])
+            )
+            if included_specfile:
+                specfile.errors.extend(included_specfile.errors)
+                specfile.commands.extend(included_specfile.commands)
+            continue
+
         prefix = RE_PREFIX.match(line)
 
         # output before very first command
@@ -201,16 +211,6 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
                     "syntax error: output before first command, missing prefix?",
                 )
             )
-            continue
-
-        # include
-        if line.startswith("<"):
-            included_specfile = include_file(
-                specfile, line_no, line, specfile.settings.include_dirs, Path(line[1:])
-            )
-            if included_specfile:
-                specfile.errors.extend(included_specfile.errors)
-                specfile.commands.extend(included_specfile.commands)
             continue
 
         # start of a new command
