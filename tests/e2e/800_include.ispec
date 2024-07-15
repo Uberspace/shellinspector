@@ -1,0 +1,13 @@
+---
+settings:
+  include_dirs:
+    - includes
+---
+% cat /tmp/include || true
+cat: can't open '/tmp/include': No such file or directory
+<dir_include.ispec
+% cat /tmp/include
+dir_include
+<800_same_level_include.inc
+% cat /tmp/include
+same_level_include

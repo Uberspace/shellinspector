@@ -29,10 +29,10 @@ You can use all settings available in Frontmatter here.
 ```
 fixture_dirs:
   - fixtures/
-include_dirs:
-  - includes/
 settings:
   timeout_seconds: 10
+  include_dirs:
+    - includes/
 ```
 
 All given relative paths are relative to the `shellinspector.yaml` file itself.
@@ -54,6 +54,8 @@ root
 % pwd
 /root
 ```
+
+All given relative paths are relative to the directory of the current spec file.
 
 ## Test Syntax
 
@@ -147,8 +149,9 @@ creating a user happens over and over. Put it into `create_user.ispec`.
 % uberspace user create -u testuser
 ```
 
-Then, include it into other files by using `<` and the path. Note that the path
-is always relative to the file that contains the include.
+Then, include it into other files by using `<` and the path. The given path
+is relative to the paths listed in the `include_dirs` key in the config file,
+plus the directory of the current spec file, in that order.
 
 ```
 < create_user.ispec

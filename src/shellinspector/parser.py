@@ -57,9 +57,11 @@ class Error:
 @dataclasses.dataclass
 class Settings:
     timeout_seconds: int
+    include_dirs: list[Path]
 
     def __init__(self, timeout_seconds=5):
         self.timeout_seconds = timeout_seconds
+        self.include_dirs = []
 
 
 @dataclasses.dataclass
@@ -124,7 +126,7 @@ RE_PREFIX = re.compile(
 )
 
 
-def parse_yaml_multidoc(stream: typing.IO) -> tuple[str, str]:
+def parse_yaml_multidoc(stream: typing.IO) -> tuple[dict, str]:
     if stream.read(3) != "---":
         stream.seek(0)
         return {}, stream.read()
@@ -170,23 +172,29 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
 
         # include
         if line.startswith("<"):
-            include_path = (specfile.path.parent / line[1:]).resolve()
+            for include_dir in specfile.settings.include_dirs:
+                include_path = (include_dir / line[1:]).resolve()
 
-            try:
-                with open(include_path) as f:
-                    included_specfile = parse(include_path, f)
+                try:
+                    with open(include_path) as f:
+                        included_specfile = parse(include_path, f)
+                except FileNotFoundError:
+                    continue
 
                 specfile.errors.extend(included_specfile.errors)
                 specfile.commands.extend(included_specfile.commands)
-            except FileNotFoundError:
+                break
+            else:
+                include_dirs = [str(d) for d in specfile.settings.include_dirs]
                 specfile.errors.append(
                     Error(
                         specfile.path,
                         line_no,
                         line,
-                        f"include error: {include_path} does not exist",
+                        f"include error: {line[1:]} does not exist in any include directory: {','.join(include_dirs)}",
                     )
                 )
+
             continue
 
         # start of a new command
@@ -250,7 +258,9 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
             cmd.expected = cmd.expected.rstrip("\n")
 
 
-def parse_global_config(ispec_path: str):
+def parse_global_config(
+    ispec_path: typing.Union[str, Path]
+) -> tuple[dict, typing.Optional[Path]]:
     search_path = Path(ispec_path)
 
     while str(search_path) != search_path.root:
@@ -258,20 +268,21 @@ def parse_global_config(ispec_path: str):
 
         try:
             with open(search_path / "shellinspector.yaml") as f:
-                return yaml.safe_load(f)
+                return yaml.safe_load(f), search_path / "shellinspector.yaml"
         except FileNotFoundError:
             pass
 
         if (search_path / ".git").exists():
             break
 
-    return {}
+    return {}, None
 
 
-def parse(path: str, stream: typing.IO) -> Specfile:
+def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
+    path = Path(path)
     specfile = Specfile(path)
 
-    config = parse_global_config(path)
+    config, config_path = parse_global_config(path)
 
     frontmatter, commands = parse_yaml_multidoc(stream)
 
@@ -288,11 +299,28 @@ def parse(path: str, stream: typing.IO) -> Specfile:
     frontmatter_settings = frontmatter.get("settings", {})
     global_settings = config.get("settings", {})
 
+    path_setting_keys = ["include_dirs"]
+
     for key in dataclasses.fields(specfile.settings):
+        value = None
+
         with suppress(LookupError):
-            setattr(specfile.settings, key.name, global_settings[key.name])
+            value = global_settings[key.name]
+            root_path = config_path.parent
+
         with suppress(LookupError):
-            setattr(specfile.settings, key.name, frontmatter_settings[key.name])
+            value = frontmatter_settings[key.name]
+            root_path = specfile.path.parent
+
+        if key.name in path_setting_keys:
+            value = value or getattr(specfile.settings, key.name)
+            value = [(root_path / Path(p)).resolve() for p in value]
+            value.append(specfile.path.parent)
+
+        if not value:
+            continue
+
+        setattr(specfile.settings, key.name, value)
 
     parse_commands(specfile, commands)
 

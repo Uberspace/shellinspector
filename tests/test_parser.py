@@ -346,15 +346,25 @@ def test_variants(line, result):
         assert getattr(commands[0], k) == v, k
 
 
-def test_include():
-    path = Path(__file__).parent / "virtual.ispec"
+@pytest.mark.parametrize(
+    "ispec_path,include_dirs,include_path",
+    [
+        (Path(__file__).parent / "virtual.ispec", "", "data/test.ispec"),
+        (Path(__file__).parent / "virtual.ispec", "data", "test.ispec"),
+    ],
+)
+def test_include(ispec_path, include_dirs, include_path):
     specfile = parse(
-        path,
+        ispec_path,
         make_stream(
             [
+                "---",
+                "settings:",
+                f"  include_dirs: [{include_dirs}]",
+                "---",
                 "% ls",
                 "file",
-                "<data/test.ispec",
+                f"<{include_path}",
                 "% ls",
                 "file",
             ]
@@ -368,17 +378,17 @@ def test_include():
     assert commands[0].execution_mode == ExecutionMode.ROOT
     assert commands[0].command == "ls"
     assert commands[0].expected == "file\n"
-    assert commands[0].source_file == path
+    assert commands[0].source_file == ispec_path
     assert commands[0].source_line_no == 1
     assert commands[1].execution_mode == ExecutionMode.ROOT
     assert commands[1].command == "whoami"
     assert commands[1].expected == "root\n"
-    assert commands[1].source_file == Path(__file__).parent / "data/test.ispec"
+    assert "test.ispec" in str(commands[1].source_file)
     assert commands[1].source_line_no == 1
     assert commands[2].execution_mode == ExecutionMode.ROOT
     assert commands[2].command == "ls"
     assert commands[2].expected == "file\n"
-    assert commands[2].source_file == path
+    assert commands[2].source_file == ispec_path
     assert commands[2].source_line_no == 4
 
 
@@ -511,7 +521,7 @@ def test_parse_global_config(ispec_path, expected_cfg):
     for git_dir in git_dirs:
         git_dir.touch()
 
-    cfg = parse_global_config(
+    cfg, cfg_path = parse_global_config(
         Path(__file__).parent / "fixtures/parse_global_config" / ispec_path
     )
 
@@ -546,3 +556,7 @@ def test_global_config_default():
     assert specfile.environment == {"FROM_CONFIG": 1}
     assert specfile.examples == [{"FROM_CONFIG": 1}]
     assert specfile.settings.timeout_seconds == 99
+    assert specfile.settings.include_dirs == [
+        Path(__file__).parent / "fixtures/parse_global_config/includes",
+        Path(__file__).parent / "fixtures/parse_global_config/combine",
+    ]
