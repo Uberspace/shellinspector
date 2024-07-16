@@ -1,1 +1,2 @@
-% adduser -D create_user
+% export USRNAME=create_user
+% adduser -D $USRNAME

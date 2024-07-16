@@ -460,7 +460,7 @@ class ShellRunner:
                 self.run(specfile.fixture_specfile_post, used_sessions)
 
         finally:
-            if not outer_used_sessions:
+            if outer_used_sessions is None:
                 for session in used_sessions:
                     session.pop_state()
 

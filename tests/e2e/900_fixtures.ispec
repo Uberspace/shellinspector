@@ -4,5 +4,7 @@ settings:
   fixture_dirs:
     - fixtures
 ---
-%~ id create_user
+% echo $USRNAME
+create_user
+%~ id $USRNAME
 create_user

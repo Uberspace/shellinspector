@@ -582,6 +582,6 @@ def test_fixture():
     assert specfile.fixture == "e2e/fixtures/create_user"
     assert not specfile.errors, specfile.errors
     assert specfile.fixture_specfile_pre
-    assert len(specfile.fixture_specfile_pre.commands) == 1
+    assert len(specfile.fixture_specfile_pre.commands) == 2
     assert specfile.fixture_specfile_post
     assert len(specfile.fixture_specfile_post.commands) == 1
