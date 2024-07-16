@@ -11,6 +11,7 @@ from shellinspector.parser import Specfile
 from shellinspector.runner import LocalShell
 from shellinspector.runner import RemoteShell
 from shellinspector.runner import RunnerEvent
+from shellinspector.runner import ShellinspectorPyContext
 from shellinspector.runner import ShellRunner
 from shellinspector.runner import disable_color
 from shellinspector.runner import get_localshell
@@ -659,6 +660,12 @@ def test_runner_python(mocker, make_runner, ssh_config):
         ), event
 
     assert run_in_file.call_count == 1
+    assert run_in_file.call_args[0][0] == Path("virtual.ispec.py")
+    context = run_in_file.call_args[0][1]
+    assert isinstance(context, ShellinspectorPyContext)
+    assert isinstance(context.applied_example, dict)
+    assert context.env["HOME"] == "/root"
+    assert run_in_file.call_args[0][2] == "return_true()"
 
 
 def test_runner_python_fail(mocker, make_runner, ssh_config):

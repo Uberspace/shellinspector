@@ -28,9 +28,15 @@ class ShellinspectorPyContext:
     env: dict
 
 
-def run_in_file(filename, si_context, code):
-    source = Path(filename).read_bytes()
-    node = ast.parse(source, filename)
+def run_in_file(filename: Path, si_context: dict, code: str):
+    """
+    Load the python code within `filename` and run the given python code within.
+    Additionally, set all values in si_context as global variables. The code
+    within `code` must be a single function call. Its return value will be
+    returned by this function.
+    """
+    with open(filename) as f:
+        node = ast.parse(f.read(), filename)
 
     call_ast = ast.parse(code)
 
@@ -56,14 +62,13 @@ def run_in_file(filename, si_context, code):
     )
 
     node.body.append(call)
-
     ast.fix_missing_locations(node)
-    obj = compile(node, filename=filename, mode="exec")
 
     globalz = {
         "context": si_context,
     }
 
+    obj = compile(node, filename=filename, mode="exec")
     exec(obj, globalz, globalz)
 
     return globalz["_return_value"]
