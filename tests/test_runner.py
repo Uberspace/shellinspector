@@ -795,7 +795,10 @@ class FakeSession(RemoteShell):
             [
                 (
                     RunnerEvent.ERROR,
-                    {"message": "could not find prompt for command", "actual": "a"},
+                    {
+                        "message": "timeout, could not find prompt for command",
+                        "actual": "a",
+                    },
                 ),
             ],
         ),
@@ -806,7 +809,10 @@ class FakeSession(RemoteShell):
             [
                 (
                     RunnerEvent.ERROR,
-                    {"message": "could not find prompt for return code", "actual": "0"},
+                    {
+                        "message": "timeout, could not find prompt for return code",
+                        "actual": "0",
+                    },
                 )
             ],
         ),
