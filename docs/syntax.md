@@ -221,7 +221,10 @@ $ whoam
 usr1
 ```
 
-Using `$` without a specified user as the first `$`-command will cause an error.
+Using `$` without a specified user as the first `$`-command will cause a random
+username like `t1234567` to be used. The username is constant per .spec file.
+Keep in mind that this test user is not actually created on the host. You have
+to create it yourself based on the username in `$SI_TEST_USER`.
 
 ## Sessions
 

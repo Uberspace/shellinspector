@@ -1,0 +1,7 @@
+%_ adduser -D ${SI_TEST_USER}
+# unlock user
+%_ passwd -u ${SI_TEST_USER}
+%_ cp -r /root/.ssh /home/${SI_TEST_USER}/
+%_ chown -R ${SI_TEST_USER}:${SI_TEST_USER} /home/${SI_TEST_USER}/.ssh
+$~ whoami
+t[0-9]+

@@ -1,3 +1,4 @@
+import re
 from io import StringIO
 from pathlib import Path
 
@@ -160,7 +161,7 @@ def test_parse_whitespace_regex():
     )
 
 
-def test_parse_error_no_user():
+def test_parse_no_user():
     specfile = parse(
         "/dev/null",
         make_stream(
@@ -170,10 +171,9 @@ def test_parse_error_no_user():
             ]
         ),
     )
-    _, errors = (specfile.commands, specfile.errors)
 
-    assert len(errors) == 1
-    assert "not have a user specified" in errors[0].message
+    assert len(specfile.errors) == 0
+    assert specfile.commands[0].user == specfile.environment["SI_TEST_USER"]
 
 
 def test_parse_error():
@@ -412,6 +412,9 @@ def test_environment():
 
     assert len(specfile.errors) == 0
 
+    assert re.match(r"^t[0-9]+$", specfile.environment["SI_TEST_USER"])
+    del specfile.environment["SI_TEST_USER"]
+
     assert specfile.environment == {
         "something": "else",
         "withspace": "with space",
@@ -544,6 +547,7 @@ def test_global_config_combine():
         ),
     )
 
+    del specfile.environment["SI_TEST_USER"]  # random value
     assert specfile.environment == {"FROM_ISPEC": 1}
     assert specfile.examples == [{"FROM_ISPEC": 1}]
 
@@ -554,6 +558,7 @@ def test_global_config_default():
         make_stream(["---", "---"]),
     )
 
+    del specfile.environment["SI_TEST_USER"]  # random value
     assert specfile.environment == {"FROM_CONFIG": 1}
     assert specfile.examples == [{"FROM_CONFIG": 1}]
     assert specfile.settings.timeout_seconds == 99

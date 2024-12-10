@@ -1,4 +1,6 @@
 import dataclasses
+import math
+import random
 import re
 import typing
 from contextlib import suppress
@@ -240,6 +242,10 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
             except (StopIteration, IndexError):
                 host = host or "remote"
 
+            if not user and execution_mode == ExecutionMode.USER and host != "local":
+                # default to randomly generated test user name
+                user = specfile.environment["SI_TEST_USER"]
+
             specfile.commands.append(
                 Command(
                     execution_mode,
@@ -254,16 +260,6 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
                     line,
                 )
             )
-
-            if not user and execution_mode == ExecutionMode.USER and host != "local":
-                specfile.errors.append(
-                    Error(
-                        specfile.path,
-                        line_no,
-                        line,
-                        "syntax error: command (and all before it) do not have a user specified",
-                    )
-                )
         else:
             # add output line to last command
             specfile.commands[-1].expected += line + "\n"
@@ -346,6 +342,9 @@ def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
             specfile.settings.fixture_dirs,
             Path(f"{specfile.fixture}_pre.ispec"),
         )
+
+    random_username = f"t{math.floor(random.uniform(0, 9999999)):>07}"
+    specfile.environment.setdefault("SI_TEST_USER", random_username)
 
     parse_commands(specfile, commands)
 
