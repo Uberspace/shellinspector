@@ -168,7 +168,7 @@ def include_file(
 
         try:
             with open(include_path) as f:
-                return parse(include_path, f)
+                return parse(include_path, f, specfile.environment.get("SI_TEST_USER"))
         except FileNotFoundError:
             continue
 
@@ -290,7 +290,11 @@ def parse_global_config(
     return {}, None
 
 
-def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
+def parse(
+    path: typing.Union[str, Path],
+    stream: typing.IO,
+    si_test_user_name=None,
+) -> Specfile:
     path = Path(path)
     specfile = Specfile(path)
 
@@ -334,6 +338,11 @@ def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
 
         setattr(specfile.settings, key.name, value)
 
+    if not si_test_user_name:
+        si_test_user_name = f"t{math.floor(random.uniform(0, 9999999)):>07}"
+
+    specfile.environment.setdefault("SI_TEST_USER", si_test_user_name)
+
     if specfile.fixture:
         specfile.fixture_specfile_pre = include_file(
             specfile,
@@ -342,9 +351,6 @@ def parse(path: typing.Union[str, Path], stream: typing.IO) -> Specfile:
             specfile.settings.fixture_dirs,
             Path(f"{specfile.fixture}_pre.ispec"),
         )
-
-    random_username = f"t{math.floor(random.uniform(0, 9999999)):>07}"
-    specfile.environment.setdefault("SI_TEST_USER", random_username)
 
     parse_commands(specfile, commands)
 
