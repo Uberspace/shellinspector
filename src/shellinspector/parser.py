@@ -236,6 +236,7 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
                     cmd
                     for cmd in reversed(specfile.commands)
                     if cmd.execution_mode == execution_mode
+                    or execution_mode == ExecutionMode.PYTHON
                 )
                 user = user or last_command.user
                 host = host or last_command.host
