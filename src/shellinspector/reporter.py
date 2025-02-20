@@ -53,6 +53,8 @@ class ConsoleReporter:
             self.print(colored(f"PASS {cmd.line}", "green"))
         elif event == RunnerEvent.COMMAND_FAILED:
             self.print(colored(f"FAIL {cmd.line}", "red"))
+            if "message" in kwargs:
+                self.print(colored(f'  {kwargs["message"]}', "red"))
             if "returncode" in kwargs["reasons"]:
                 rc = kwargs["returncode"]
                 self.print(colored("  command failed", "red"))

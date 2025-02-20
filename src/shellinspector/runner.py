@@ -440,7 +440,9 @@ class ShellRunner:
                         self.report(RunnerEvent.COMMAND_PASSED, cmd, {})
                     else:
                         self.report(
-                            RunnerEvent.COMMAND_FAILED, None, {"message": result}
+                            RunnerEvent.COMMAND_FAILED,
+                            cmd,
+                            {"message": result, "reasons": []},
                         )
                         self.report(RunnerEvent.RUN_FAILED, None, {})
 
