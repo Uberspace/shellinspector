@@ -35,6 +35,12 @@ class Command:
     source_line_no: int
     line: str
 
+    def get_line_with_variables(self, env):
+        line = self.line
+        for k, v in env.items():
+            line = line.replace("${" + k + "}", v)
+        return line
+
     @property
     def line_count(self):
         # TODO: replace this with .removesuffix("\n").count("\n")+1 once we drop py3.7

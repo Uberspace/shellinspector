@@ -331,6 +331,7 @@ def command_local_echo_ignore():
                     {
                         "returncode": 0,
                         "actual": "a",
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -347,6 +348,7 @@ def command_local_echo_ignore():
                         "returncode": 0,
                         "actual": "b",
                         "reasons": {"output"},
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -362,6 +364,7 @@ def command_local_echo_ignore():
                         "returncode": 1,
                         "actual": "a",
                         "reasons": {"returncode"},
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -377,6 +380,7 @@ def command_local_echo_ignore():
                         "returncode": 1,
                         "actual": "b",
                         "reasons": {"output", "returncode"},
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -392,6 +396,7 @@ def command_local_echo_ignore():
                     {
                         "returncode": 0,
                         "actual": "aaa11aa",
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -407,6 +412,7 @@ def command_local_echo_ignore():
                         "returncode": 0,
                         "actual": "b",
                         "reasons": {"output"},
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -422,6 +428,7 @@ def command_local_echo_ignore():
                     {
                         "returncode": 0,
                         "actual": "aaa11aa",
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -436,6 +443,7 @@ def command_local_echo_ignore():
                     {
                         "returncode": 0,
                         "actual": "b",
+                        "env": {"a": "b"},
                     },
                 ),
             ],
@@ -444,7 +452,7 @@ def command_local_echo_ignore():
 )
 def test_check_result(make_runner, cmd, args, expected_result, expected_events):
     runner, events = make_runner()
-    result = runner._check_result(cmd, *args)
+    result = runner._check_result(cmd, *args, {"a": "b"})
 
     assert result == expected_result, events
 
@@ -473,7 +481,7 @@ def test_check_result_unknown_assert_mode(make_runner, ssh_config):
     )
 
     with pytest.raises(Exception, match="Unknown assert_mode: xxx.*"):
-        runner._check_result(cmd, "", 0)
+        runner._check_result(cmd, "", 0, {})
 
 
 @pytest.mark.parametrize(
@@ -781,11 +789,14 @@ class FakeSession(RemoteShell):
     "prompt_works,actual_output,expected_result,expected_events",
     (
         (
-            [True, True],
-            [b"a", b"0"],
+            [True, True, True],
+            [b"a", b"0", b"a=b"],
             True,
             [
-                (RunnerEvent.COMMAND_PASSED, {"returncode": 0, "actual": "a"}),
+                (
+                    RunnerEvent.COMMAND_PASSED,
+                    {"returncode": 0, "actual": "a", "env": {"a": "b"}},
+                ),
             ],
         ),
         (
@@ -843,29 +854,38 @@ def test_run_command(
     "prompt_works,actual_output,expected_result,expected_events",
     (
         (
-            [True, True],
-            [b"a", b"0"],
+            [True, True, True],
+            [b"a", b"0", b"a=b"],
             True,
             [
                 (RunnerEvent.COMMAND_STARTING, "echo a", {}),
                 (
                     RunnerEvent.COMMAND_PASSED,
                     "echo a",
-                    {"returncode": 0, "actual": "a"},
+                    {
+                        "returncode": 0,
+                        "actual": "a",
+                        "env": {"a": "b"},
+                    },
                 ),
                 (RunnerEvent.RUN_SUCCEEDED, None, {}),
             ],
         ),
         (
-            [True, True],
-            [b"a", b"1"],
+            [True, True, True],
+            [b"a", b"1", b"a=b"],
             False,
             [
                 (RunnerEvent.COMMAND_STARTING, "echo a", {}),
                 (
                     RunnerEvent.COMMAND_FAILED,
                     "echo a",
-                    {"returncode": 1, "actual": "a", "reasons": {"returncode"}},
+                    {
+                        "returncode": 1,
+                        "actual": "a",
+                        "reasons": {"returncode"},
+                        "env": {"a": "b"},
+                    },
                 ),
                 (RunnerEvent.RUN_FAILED, None, {}),
             ],

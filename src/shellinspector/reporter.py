@@ -39,20 +39,25 @@ class ConsoleReporter:
             sys.stdout.flush()
 
     def __call__(self, event, cmd, **kwargs):
+        if "env" in kwargs:
+            line = cmd.get_line_with_variables(kwargs["env"])
+        elif cmd:
+            line = getattr(cmd, "line", None)
+
         if event == RunnerEvent.COMMAND_STARTING:
             if logging.root.level > logging.DEBUG:
                 end = ""
             else:
                 end = "\n"
-            self.print(colored(f"RUN  {cmd.line}", "light_grey"), end=end)
+            self.print(colored(f"RUN  {line}", "light_grey"), end=end)
         elif event == RunnerEvent.ERROR:
-            self.print(colored(f"ERR  {cmd.line}", "red"))
+            self.print(colored(f"ERR  {line}", "red"))
             self.print(colored("  " + kwargs["message"], "red"))
             self.print_indented("  output before giving up:", kwargs["actual"], "red")
         elif event == RunnerEvent.COMMAND_PASSED:
-            self.print(colored(f"PASS {cmd.line}", "green"))
+            self.print(colored(f"PASS {line}", "green"))
         elif event == RunnerEvent.COMMAND_FAILED:
-            self.print(colored(f"FAIL {cmd.line}", "red"))
+            self.print(colored(f"FAIL {line}", "red"))
             if "message" in kwargs:
                 self.print(colored(f'  {kwargs["message"]}', "red"))
             if "returncode" in kwargs["reasons"]:

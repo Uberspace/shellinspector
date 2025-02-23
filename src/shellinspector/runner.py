@@ -332,7 +332,7 @@ class ShellRunner:
         for reporter in self.reporters:
             reporter(event, cmd, **kwargs)
 
-    def _check_result(self, cmd, command_output, returncode):
+    def _check_result(self, cmd, command_output, returncode, env):
         if cmd.assert_mode == AssertMode.LITERAL:
             output_matches = command_output == cmd.expected
         elif cmd.assert_mode == AssertMode.REGEX:
@@ -349,6 +349,7 @@ class ShellRunner:
                 {
                     "returncode": returncode,
                     "actual": command_output,
+                    "env": env,
                 },
             )
 
@@ -368,6 +369,7 @@ class ShellRunner:
                     "reasons": reasons,
                     "returncode": returncode,
                     "actual": command_output,
+                    "env": env,
                 },
             )
 
@@ -402,7 +404,12 @@ class ShellRunner:
 
         rc_output = int(rc_output)
 
-        return self._check_result(cmd, command_output, int(rc_output))
+        return self._check_result(
+            cmd,
+            command_output,
+            int(rc_output),
+            session.get_environment(),
+        )
 
     def run(self, specfile: Specfile, outer_used_sessions=None):
         if outer_used_sessions:
