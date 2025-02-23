@@ -23,9 +23,9 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "pexpect==4.8.0",
-  "termcolor==2.2.0",
-  "PyYAML==6.0.1",
+  "pexpect==4.*",
+  "termcolor==2.*",
+  "PyYAML>=6",
 ]
 dynamic = ["version"]
 
