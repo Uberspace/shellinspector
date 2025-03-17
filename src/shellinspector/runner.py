@@ -423,7 +423,19 @@ class ShellRunner:
 
             for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
-                session = self._get_session(cmd, specfile.settings.timeout_seconds)
+                try:
+                    session = self._get_session(cmd, specfile.settings.timeout_seconds)
+                except Exception as ex:
+                    self.report(
+                        RunnerEvent.COMMAND_FAILED,
+                        cmd,
+                        {
+                            "message": f"Could not open session: {str(ex)}",
+                            "reasons": [],
+                        },
+                    )
+                    self.report(RunnerEvent.RUN_FAILED, None, {})
+                    return False
 
                 if cmd.execution_mode == ExecutionMode.PYTHON:
                     ctx = ShellinspectorPyContext({}, {})
