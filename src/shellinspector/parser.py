@@ -199,8 +199,9 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
 
         # include
         if line.startswith("<"):
+            include_path = Path(line[1:].strip())
             included_specfile = include_file(
-                specfile, line_no, line, specfile.settings.include_dirs, Path(line[1:])
+                specfile, line_no, line, specfile.settings.include_dirs, include_path
             )
             if included_specfile:
                 specfile.errors.extend(included_specfile.errors)

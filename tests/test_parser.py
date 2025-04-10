@@ -351,6 +351,7 @@ def test_variants(line, result):
     [
         (Path(__file__).parent / "virtual.ispec", "", "data/test.ispec"),
         (Path(__file__).parent / "virtual.ispec", "data", "test.ispec"),
+        (Path(__file__).parent / "virtual.ispec", "data", " test.ispec"),  # w/ space
     ],
 )
 def test_include(ispec_path, include_dirs, include_path):
