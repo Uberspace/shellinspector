@@ -5,9 +5,10 @@ from pathlib import Path
 
 from termcolor import colored
 
+from shellinspector.logging import get_logger
 from shellinspector.runner import RunnerEvent
 
-LOGGER = logging.getLogger(Path(__file__).name)
+LOGGER = get_logger(Path(__file__).name)
 
 
 class ConsoleReporter:

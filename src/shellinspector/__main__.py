@@ -4,11 +4,12 @@ import re
 import sys
 from pathlib import Path
 
+from shellinspector.logging import get_logger
 from shellinspector.parser import parse
 from shellinspector.reporter import ConsoleReporter
 from shellinspector.runner import ShellRunner
 
-LOGGER = logging.getLogger(Path(__file__).name)
+LOGGER = get_logger(Path(__file__).name)
 
 
 def get_vagrant_sshport():
@@ -151,7 +152,7 @@ def main():
     args = parse_args()
 
     if args.verbose:
-        logging.basicConfig(level=logging.DEBUG)
+        logging.root.setLevel(logging.DEBUG)
 
     logging.debug("parsed args %s", args)
 

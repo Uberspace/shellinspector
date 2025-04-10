@@ -15,11 +15,12 @@ from pexpect import pxssh
 from pexpect import spawn
 from pexpect.pxssh import ExceptionPxssh
 
+from shellinspector.logging import get_logger
 from shellinspector.parser import AssertMode
 from shellinspector.parser import ExecutionMode
 from shellinspector.parser import Specfile
 
-LOGGER = logging.getLogger(Path(__file__).name)
+LOGGER = get_logger(Path(__file__).name)
 
 
 class TimeoutException(Exception):
