@@ -85,6 +85,7 @@ class Specfile:
     fixture_specfile_pre: typing.Optional["Specfile"]
     fixture_specfile_post: typing.Optional["Specfile"]
     applied_example: dict
+    tags: list[str]
     settings: Settings
 
     def __init__(
@@ -311,7 +312,7 @@ def parse(
     frontmatter, commands = parse_yaml_multidoc(stream)
 
     # use values in frontmatter if they exist, otherwise use global config
-    for key in ["examples", "environment", "fixture"]:
+    for key in ["examples", "environment", "fixture", "tags"]:
         try:
             value = frontmatter[key]
         except LookupError:

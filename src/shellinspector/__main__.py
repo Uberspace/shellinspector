@@ -73,9 +73,11 @@ def parse_spec_file(path):
     return specfile
 
 
-def run(target_host, spec_file_paths, identity, verbose):
+def run(target_host, spec_file_paths, identity, tags, verbose):
     ssh_config = get_ssh_config(target_host)
     ssh_config["ssh_key"] = identity
+
+    tags = tags.split(",")
 
     context = {
         "SI_TARGET": ssh_config["server"],
@@ -95,6 +97,9 @@ def run(target_host, spec_file_paths, identity, verbose):
         spec_file = parse_spec_file(spec_file_path)
 
         if spec_file is None or spec_file.errors:
+            continue
+
+        if tags and not any(t in spec_file.tags for t in tags):
             continue
 
         if spec_file.examples:
@@ -137,6 +142,11 @@ def parse_args(argv=None):
         "-v",
         action="store_true",
         default=False,
+    )
+    parser.add_argument(
+        "--tags",
+        required=False,
+        help="only run spec files which list the given tags in their frontmatter",
     )
     parser.add_argument(
         "spec_file_paths",
