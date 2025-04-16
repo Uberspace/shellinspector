@@ -334,10 +334,11 @@ class ShellRunner:
             reporter(event, cmd, **kwargs)
 
     def _check_result(self, cmd, command_output, returncode, env):
+        expected = cmd.get_expected_with_vars(env)
         if cmd.assert_mode == AssertMode.LITERAL:
-            output_matches = command_output == cmd.expected
+            output_matches = command_output == expected
         elif cmd.assert_mode == AssertMode.REGEX:
-            output_matches = re.search(cmd.expected, command_output, re.MULTILINE)
+            output_matches = re.search(expected, command_output, re.MULTILINE)
         elif cmd.assert_mode == AssertMode.IGNORE:
             output_matches = True
         else:

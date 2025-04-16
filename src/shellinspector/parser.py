@@ -41,6 +41,14 @@ class Command:
             line = line.replace("${" + k + "}", v)
         return line
 
+    def get_expected_with_vars(self, env):
+        expected = self.expected
+        # do not just use str.format here, because it can't deal with unused
+        # variables or open parentheses.
+        for k, v in env.items():
+            expected = expected.replace("{" + str(k) + "}", str(v))
+        return expected
+
     @property
     def line_count(self):
         # TODO: replace this with .removesuffix("\n").count("\n")+1 once we drop py3.7

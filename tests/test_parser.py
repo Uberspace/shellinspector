@@ -490,6 +490,22 @@ def test_command_short_literal():
     assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, LITERAL)"
 
 
+def test_command_expected_with_args():
+    cmd = Command(
+        ExecutionMode.USER,
+        "echo a",
+        None,
+        None,
+        "local",
+        AssertMode.LITERAL,
+        "{a}{1}{unused}{open",
+        "/some.ispec",
+        1,
+        "$ echo a\nb",
+    )
+    assert cmd.get_expected_with_vars({"a": "b"}) == "b{1}{unused}{open"
+
+
 def test_command_short_regex():
     cmd = Command(
         ExecutionMode.USER,

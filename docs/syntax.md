@@ -137,6 +137,14 @@ $ echo -n a
 a
 ```
 
+To test for dynamic values, you can get the value of shell variables using the
+`{VAR}` syntax, like so:
+
+```
+$ whoami
+{USER}
+```
+
 ##### Regex Match
 
 Interpret the specified output as a regex with `re.MULTILINE` and try to match
@@ -161,6 +169,10 @@ Otherwise this would never match, since `r"aaaa\n"` can't match `aaaa`.
 $~ echo aaaab
 aaaa
 ```
+
+Like with literal matches, you can alo use `{VAR}` here. Keep in mind that this
+conflicts with regex syntax like `[abc]{5}` to get 5 of either a, b, or c. So
+take care to not name any env variables after numbers.
 
 ##### Ignore
 

@@ -254,6 +254,22 @@ def command_local_echo_literal():
 
 
 @pytest.fixture
+def command_local_echo_literal_var():
+    return Command(
+        ExecutionMode.USER,
+        "echo $a",
+        None,
+        None,
+        "local",
+        AssertMode.LITERAL,
+        "{a}",
+        "/some.ispec",
+        1,
+        "$ echo $a",
+    )
+
+
+@pytest.fixture
 def command_local_echo_literal_fail():
     return Command(
         ExecutionMode.USER,
@@ -302,6 +318,22 @@ def command_local_echo_regex():
 
 
 @pytest.fixture
+def command_local_echo_regex_var():
+    return Command(
+        ExecutionMode.USER,
+        "echo $a",
+        None,
+        None,
+        "local",
+        AssertMode.REGEX,
+        "[{a}]{1}",
+        "/some.ispec",
+        1,
+        "$ echo $a foo",
+    )
+
+
+@pytest.fixture
 def command_local_echo_ignore():
     return Command(
         ExecutionMode.USER,
@@ -331,6 +363,22 @@ def command_local_echo_ignore():
                     {
                         "returncode": 0,
                         "actual": "a",
+                        "env": {"a": "b"},
+                    },
+                ),
+            ],
+        ),
+        # LITERAL w/ variable
+        (
+            lazy_fixture("command_local_echo_literal_var"),
+            ["b", 0],
+            True,
+            [
+                (
+                    RunnerEvent.COMMAND_PASSED,
+                    {
+                        "returncode": 0,
+                        "actual": "b",
                         "env": {"a": "b"},
                     },
                 ),
@@ -396,6 +444,22 @@ def command_local_echo_ignore():
                     {
                         "returncode": 0,
                         "actual": "aaa11aa",
+                        "env": {"a": "b"},
+                    },
+                ),
+            ],
+        ),
+        # REGEX /w variable
+        (
+            lazy_fixture("command_local_echo_regex_var"),
+            ["b foo", 0],
+            True,
+            [
+                (
+                    RunnerEvent.COMMAND_PASSED,
+                    {
+                        "returncode": 0,
+                        "actual": "b foo",
                         "env": {"a": "b"},
                     },
                 ),
