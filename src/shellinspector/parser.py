@@ -130,6 +130,13 @@ class Specfile:
 
         return copy
 
+    def get_pretty_string(self):
+        if self.applied_example:
+            example_str = ",".join(f"{k}={v}" for k, v in self.applied_example.items())
+            return f"{self.path} (w/ {example_str})"
+        else:
+            return f"{self.path}"
+
 
 # parse a line like
 #   [user@host]$ ls

@@ -4,6 +4,8 @@ import re
 import sys
 from pathlib import Path
 
+from termcolor import colored
+
 from shellinspector.logging import get_logger
 from shellinspector.parser import parse
 from shellinspector.reporter import ConsoleReporter
@@ -108,17 +110,29 @@ def run(target_host, spec_file_paths, identity, tags, verbose):
         else:
             spec_files.append(spec_file)
 
+    failed_spec_files = []
+
+    print(f"Testing {len(spec_files)} spec files, including examples:")
+
     for spec_file in spec_files:
         if len(spec_files) > 1:
-            if spec_file.applied_example:
-                example_str = ",".join(
-                    f"{k}={v}" for k, v in spec_file.applied_example.items()
-                )
-                print(f"{spec_file.path} (w/ {example_str})")
-            else:
-                print(f"{spec_file.path}")
+            print()
+            print(spec_file.get_pretty_string())
 
-        success = success & runner.run(spec_file)
+        file_success = runner.run(spec_file)
+        if not file_success:
+            failed_spec_files.append(spec_file)
+        success = success & file_success
+
+    if len(spec_files) > 1:
+        print()
+        if success:
+            print(colored("All spec files succeeded.", "green"))
+        else:
+            print(colored(f"Some ({len(failed_spec_files)}) spec files failed:", "red"))
+
+            for spec_file in failed_spec_files:
+                print(f"* {spec_file.get_pretty_string()}")
 
     return 0 if success else 1
 
