@@ -77,7 +77,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose):
     ssh_config = get_ssh_config(target_host)
     ssh_config["ssh_key"] = identity
 
-    tags = tags.split(",")
+    tags = tags.split(",") if tags else []
 
     context = {
         "SI_TARGET": ssh_config["server"],
