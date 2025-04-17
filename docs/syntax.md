@@ -12,10 +12,37 @@ root
 Then, run it:
 
 ```
-$ python -m test tests/ssh_connection.ispec
+$ shellinspector tests/ssh_connection.ispec
+Testing 1 spec files, including examples:
 PASS % whoami
 PASS % pwd
 ```
+
+You can also specify multiple files:
+
+```
+$ shellinspector tests/ssh_connection.ispec tests/other.ispec
+Testing 2 spec files, including examples:
+
+tests/ssh_connection.ispec
+PASS % whoami
+PASS % pwd
+
+tests/other.ispec
+PASS % echo something else
+
+All spec files succeeded.
+```
+
+## Retry
+
+If you pass multiple spec files and some of them fail, shellinspector will
+create a `.si-retry` file. A subsequent run will only test the spec files that
+are specified both as an argument and in the `.si-retry` file, allow you to
+quickly iterate on failing tests without running all passing ones over and over.
+The file is during each run.
+
+It is recommended to add `.si-retry` to your `.gitignore` file.
 
 ## Config File
 

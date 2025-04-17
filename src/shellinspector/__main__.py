@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import re
 import sys
 from pathlib import Path
@@ -95,6 +96,17 @@ def run(target_host, spec_file_paths, identity, tags, verbose):
 
     spec_files = []
 
+    passed_spec_file_paths = spec_file_paths
+
+    try:
+        with open(".si-retry") as f:
+            spec_file_paths = [p.strip() for p in f.readlines()]
+
+        os.unlink(".si-retry")
+        print("Found .si-retry, only running spec files listed there.")
+    except FileNotFoundError:
+        pass
+
     for spec_file_path in spec_file_paths:
         spec_file = parse_spec_file(spec_file_path)
 
@@ -133,6 +145,13 @@ def run(target_host, spec_file_paths, identity, tags, verbose):
 
             for spec_file in failed_spec_files:
                 print(f"* {spec_file.get_pretty_string()}")
+
+    if failed_spec_files and len(passed_spec_file_paths) > 1:
+        with open(".si-retry", "w") as f:
+            f.write("\n".join(str(s.path) for s in failed_spec_files) + "\n")
+
+        print()
+        print("Wrote .si-retry file, the next run will only run these spec files.")
 
     return 0 if success else 1
 
