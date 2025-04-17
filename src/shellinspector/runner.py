@@ -421,7 +421,9 @@ class ShellRunner:
 
         try:
             if specfile.fixture_specfile_pre:
-                self.run(specfile.fixture_specfile_pre, used_sessions)
+                pre_success = self.run(specfile.fixture_specfile_pre, used_sessions)
+                if not pre_success:
+                    return False
 
             for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
@@ -497,7 +499,9 @@ class ShellRunner:
                         return False
 
             if specfile.fixture_specfile_post:
-                self.run(specfile.fixture_specfile_post, used_sessions)
+                post_success = self.run(specfile.fixture_specfile_post, used_sessions)
+                if not post_success:
+                    return False
 
         finally:
             if outer_used_sessions is None:
