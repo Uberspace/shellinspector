@@ -1,0 +1,12 @@
+---
+fixture:
+  name: create_user_2
+  scope: run
+settings:
+  fixture_dirs:
+    - fixtures
+---
+# is the file still there even though the user is created/deleted via fixture
+# and this is a different spec file than 910_fixtures_run.ispec?
+% cat /home/create_user_2/910_fixtures_run_test
+hi

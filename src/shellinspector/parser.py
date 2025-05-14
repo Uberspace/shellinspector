@@ -82,6 +82,11 @@ class Settings:
         self.fixture_dirs = []
 
 
+class FixtureScope(Enum):
+    FILE = "file"
+    RUN = "run"
+
+
 @dataclasses.dataclass
 class Specfile:
     path: Path
@@ -90,6 +95,7 @@ class Specfile:
     environment: dict[str, str]
     examples: list[dict[str, str]]
     fixture: typing.Optional[str]
+    fixture_scope: FixtureScope
     fixture_specfile_pre: typing.Optional["Specfile"]
     fixture_specfile_post: typing.Optional["Specfile"]
     applied_example: dict
@@ -105,6 +111,7 @@ class Specfile:
         self.environment = environment or {}
         self.examples = examples or []
         self.fixture = None
+        self.fixture_scope = FixtureScope.FILE
         self.fixture_specfile_pre = None
         self.fixture_specfile_post = None
         self.applied_example = None
@@ -335,6 +342,14 @@ def parse(
 
         if value is not None:
             setattr(specfile, key, value)
+
+    # fixture may be the name of a fixture, or a dict like
+    #   {"name": "create_user", "scope": "file"}
+    if isinstance(specfile.fixture, dict):
+        if "scope" in specfile.fixture:
+            specfile.fixture_scope = FixtureScope(specfile.fixture["scope"])
+
+        specfile.fixture = specfile.fixture["name"]
 
     frontmatter_settings = frontmatter.get("settings", {})
     global_settings = config.get("settings", {})

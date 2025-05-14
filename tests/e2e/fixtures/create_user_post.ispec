@@ -1,1 +1,1 @@
-%_ deluser create_user || true
+%_ deluser --remove-home create_user || true

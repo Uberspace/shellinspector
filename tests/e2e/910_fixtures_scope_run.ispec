@@ -1,0 +1,14 @@
+---
+fixture:
+  name: create_user_2
+  scope: run
+settings:
+  fixture_dirs:
+    - fixtures
+---
+%~ id create_user_2
+create_user_2
+% test ! -f /home/create_user_2/910_fixtures_run_test
+# create a file inside the fixture-controlled user
+% echo hi > /home/create_user_2/910_fixtures_run_test
+% test -f /home/create_user_2/910_fixtures_run_test

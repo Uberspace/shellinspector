@@ -18,6 +18,7 @@ from pexpect.pxssh import ExceptionPxssh
 from shellinspector.logging import get_logger
 from shellinspector.parser import AssertMode
 from shellinspector.parser import ExecutionMode
+from shellinspector.parser import FixtureScope
 from shellinspector.parser import Specfile
 
 LOGGER = get_logger(Path(__file__).name)
@@ -420,7 +421,10 @@ class ShellRunner:
             used_sessions = set()
 
         try:
-            if specfile.fixture_specfile_pre:
+            if (
+                specfile.fixture_specfile_pre
+                and specfile.fixture_scope == FixtureScope.FILE
+            ):
                 pre_success = self.run(specfile.fixture_specfile_pre, used_sessions)
                 if not pre_success:
                     return False
@@ -469,7 +473,10 @@ class ShellRunner:
                         )
                         self.report(RunnerEvent.RUN_FAILED, None, {})
 
-                        if specfile.fixture_specfile_post:
+                        if (
+                            specfile.fixture_specfile_post
+                            and specfile.fixture_scope == FixtureScope.FILE
+                        ):
                             self.run(specfile.fixture_specfile_post, used_sessions)
 
                         return False
@@ -493,12 +500,18 @@ class ShellRunner:
                     if not self._run_command(session, cmd):
                         self.report(RunnerEvent.RUN_FAILED, None, {})
 
-                        if specfile.fixture_specfile_post:
+                        if (
+                            specfile.fixture_specfile_post
+                            and specfile.fixture_scope == FixtureScope.FILE
+                        ):
                             self.run(specfile.fixture_specfile_post, used_sessions)
 
                         return False
 
-            if specfile.fixture_specfile_post:
+            if (
+                specfile.fixture_specfile_post
+                and specfile.fixture_scope == FixtureScope.FILE
+            ):
                 post_success = self.run(specfile.fixture_specfile_post, used_sessions)
                 if not post_success:
                     return False

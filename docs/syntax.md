@@ -129,6 +129,35 @@ settings:
 The `_pre` fixture is run before the first command in `test.ispec`, the `_post`
 fixture is run after the last command, even if something failed.
 
+By default fixtures run at the start and end of a specfile. Sometimes setup and
+teardown tasks are only required once for all spec files within a run. In that
+case, you can use run-fixtures:
+
+```
+---
+fixture:
+  name: user_create
+  scope: run
+settings:
+  fixture_dirs:
+    - fixtures/
+---
+% test -d /home/testuser
+```
+
+The `_pre` fixture is run before the first spec file is executed, the `_post`
+fixture is run after the very last spec file, even if something failed. Since
+SSH sessions are established and closed for each spec file independently,
+changes to the shell environment by the fixture do not influence the tests.
+
+Not specifying a scope is equivalent to:
+
+```
+fixture:
+  name: ...
+  scope: file
+```
+
 ### Run commands
 
 To plainly interact with the shell as the root user or from within an uberspace,

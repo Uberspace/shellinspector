@@ -8,6 +8,7 @@ from pathlib import Path
 from termcolor import colored
 
 from shellinspector.logging import get_logger
+from shellinspector.parser import FixtureScope
 from shellinspector.parser import parse
 from shellinspector.reporter import ConsoleReporter
 from shellinspector.runner import ShellRunner
@@ -108,6 +109,8 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
         except FileNotFoundError:
             pass
 
+    run_scoped_fixtures = {}
+
     for spec_file_path in spec_file_paths:
         spec_file = parse_spec_file(spec_file_path)
 
@@ -123,6 +126,26 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
         else:
             spec_files.append(spec_file)
 
+        if spec_file.fixture_scope == FixtureScope.RUN:
+            run_scoped_fixtures[spec_file.fixture] = spec_file
+
+    if run_scoped_fixtures:
+        print(f"Running {len(run_scoped_fixtures)} run-scoped pre-fixtures:")
+
+        for spec_file in run_scoped_fixtures.values():
+            if not spec_file.fixture_specfile_pre:
+                continue
+
+            print()
+            print(spec_file.fixture_specfile_pre.get_pretty_string())
+            file_success = runner.run(spec_file.fixture_specfile_pre)
+
+            if not file_success:
+                print(colored(f"Fixture {spec_file.fixture} failed", "red"))
+                return 1
+
+        print()
+
     failed_spec_files = []
 
     print(f"Testing {len(spec_files)} spec files, including examples:")
@@ -136,6 +159,22 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
         if not file_success:
             failed_spec_files.append(spec_file)
         success = success & file_success
+
+    if run_scoped_fixtures:
+        print()
+        print(f"Running {len(run_scoped_fixtures)} run-scoped post-fixtures:")
+
+        for spec_file in run_scoped_fixtures.values():
+            if not spec_file.fixture_specfile_post:
+                continue
+
+            print()
+            print(spec_file.fixture_specfile_post.get_pretty_string())
+            file_success = runner.run(spec_file.fixture_specfile_post)
+
+            if not file_success:
+                print(colored(f"Fixture {spec_file.fixture} failed", "red"))
+                success = False
 
     if len(spec_files) > 1:
         print()
