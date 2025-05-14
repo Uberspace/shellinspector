@@ -76,7 +76,7 @@ def parse_spec_file(path):
     return specfile
 
 
-def run(target_host, spec_file_paths, identity, tags, verbose):
+def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
     ssh_config = get_ssh_config(target_host)
     ssh_config["ssh_key"] = identity
 
@@ -98,14 +98,15 @@ def run(target_host, spec_file_paths, identity, tags, verbose):
 
     passed_spec_file_paths = spec_file_paths
 
-    try:
-        with open(".si-retry") as f:
-            spec_file_paths = [p.strip() for p in f.readlines()]
+    if not skip_retry:
+        try:
+            with open(".si-retry") as f:
+                spec_file_paths = [p.strip() for p in f.readlines()]
 
-        os.unlink(".si-retry")
-        print("Found .si-retry, only running spec files listed there.")
-    except FileNotFoundError:
-        pass
+            os.unlink(".si-retry")
+            print("Found .si-retry, only running spec files listed there.")
+        except FileNotFoundError:
+            pass
 
     for spec_file_path in spec_file_paths:
         spec_file = parse_spec_file(spec_file_path)
@@ -146,7 +147,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose):
             for spec_file in failed_spec_files:
                 print(f"* {spec_file.get_pretty_string()}")
 
-    if failed_spec_files and len(passed_spec_file_paths) > 1:
+    if failed_spec_files and len(passed_spec_file_paths) > 1 and not skip_retry:
         with open(".si-retry", "w") as f:
             f.write("\n".join(str(s.path) for s in failed_spec_files) + "\n")
 
@@ -180,6 +181,12 @@ def parse_args(argv=None):
         "--tags",
         required=False,
         help="only run spec files which list the given tags in their frontmatter",
+    )
+    parser.add_argument(
+        "--skip-retry",
+        action="store_true",
+        default=False,
+        help="do not write or respect .si-retry files, i.e. always run all files provided",
     )
     parser.add_argument(
         "spec_file_paths",
