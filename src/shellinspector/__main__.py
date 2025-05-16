@@ -7,6 +7,7 @@ from pathlib import Path
 
 from termcolor import colored
 
+from shellinspector.__about__ import __version__
 from shellinspector.logging import get_logger
 from shellinspector.parser import FixtureScope
 from shellinspector.parser import parse
@@ -226,6 +227,11 @@ def parse_args(argv=None):
         action="store_true",
         default=False,
         help="do not write or respect .si-retry files, i.e. always run all files provided",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=__version__,
     )
     parser.add_argument(
         "spec_file_paths",
