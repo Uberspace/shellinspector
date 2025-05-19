@@ -69,6 +69,7 @@ class ConsoleReporter:
                 self.print(colored("  command failed", "red"))
                 self.print(colored("    expected: 0", "light_grey"))
                 self.print(colored(f"    actual:   {rc}", "light_grey"))
+                self.print_indented("    output:", kwargs["actual"], "white")
             if "output" in kwargs["reasons"]:
                 self.print(colored("  output did not match", "red"))
                 self.print_indented("    expected:", cmd.expected, "light_grey")
