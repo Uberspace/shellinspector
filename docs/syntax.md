@@ -185,13 +185,8 @@ root:x:0:0:root:/root:/bin/bash
 bin:x:1:1:bin:/bin:/usr/bin/nologin
 ```
 
-Note that there is always a final new line after the expected output, so this
-will currently always fail:
-
-```
-$ echo -n a
-a
-```
+Leading and trailing whitespace is always ignored, including one or multiple new
+lines before or after the actual or expected output.
 
 To test for dynamic values, you can get the value of shell variables using the
 `{VAR}` syntax, like so:
