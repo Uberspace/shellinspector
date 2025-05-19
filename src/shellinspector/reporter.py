@@ -50,15 +50,18 @@ class ConsoleReporter:
                 end = ""
             else:
                 end = "\n"
-            self.print(colored(f"RUN  {line}", "light_grey"), end=end)
+            self.print(
+                colored(f"[{cmd.source_line_no_zeroed}] RUN  {line}", "light_grey"),
+                end=end,
+            )
         elif event == RunnerEvent.ERROR:
-            self.print(colored(f"ERR  {line}", "red"))
+            self.print(colored(f"[{cmd.source_line_no_zeroed}] ERR  {line}", "red"))
             self.print(colored("  " + kwargs["message"], "red"))
             self.print_indented("  output before giving up:", kwargs["actual"], "red")
         elif event == RunnerEvent.COMMAND_PASSED:
-            self.print(colored(f"PASS {line}", "green"))
+            self.print(colored(f"[{cmd.source_line_no_zeroed}] PASS {line}", "green"))
         elif event == RunnerEvent.COMMAND_FAILED:
-            self.print(colored(f"FAIL {line}", "red"))
+            self.print(colored(f"[{cmd.source_line_no_zeroed}] FAIL {line}", "red"))
             if "message" in kwargs:
                 self.print(colored(f'  {kwargs["message"]}', "red"))
             if "returncode" in kwargs["reasons"]:

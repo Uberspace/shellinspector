@@ -50,6 +50,10 @@ class Command:
         return expected
 
     @property
+    def source_line_no_zeroed(self):
+        return f"{self.source_line_no:3}"
+
+    @property
     def line_count(self):
         # TODO: replace this with .removesuffix("\n").count("\n")+1 once we drop py3.7
         count = self.expected.count("\n")
