@@ -121,7 +121,14 @@ class RemoteShell(pxssh.pxssh):
             if not v:
                 continue
 
-            env[k] = " ".join(shlex.split(v))
+            try:
+                env[k] = " ".join(shlex.split(v))
+            except ValueError:
+                LOGGER.debug(
+                    "Could not get value of env variable %s, continuing anyway. Original value: %s",
+                    k,
+                    v,
+                )
 
         return env
 
