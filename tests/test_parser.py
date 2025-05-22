@@ -125,8 +125,10 @@ def test_parse_whitespace_literal():
         make_stream(
             [
                 "% echo ab",
+                "",
                 "a",
                 "b",
+                "",
             ]
         ),
     )
@@ -135,7 +137,7 @@ def test_parse_whitespace_literal():
     assert len(errors) == 0
     assert len(commands) == 1
 
-    assert commands[0].expected == "a\nb\n"
+    assert commands[0].expected == "a\nb"
 
 
 def test_parse_whitespace_regex():
