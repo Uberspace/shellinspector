@@ -89,21 +89,21 @@ def test_parse():
     assert commands[0].user == "usr"
     assert commands[0].command == "echo a"
     assert commands[0].assert_mode == AssertMode.LITERAL
-    assert commands[0].expected == "a\n"
+    assert commands[0].expected == "a"
     assert commands[0].source_file == Path("/dev/null")
     assert commands[0].source_line_no == 1
     assert commands[1].execution_mode == ExecutionMode.USER
-    assert commands[1].user == "usr"
+    assert commands[1].user is None
     assert commands[1].command == "echo b"
     assert commands[1].assert_mode == AssertMode.LITERAL
-    assert commands[1].expected == "b\n"
+    assert commands[1].expected == "b"
     assert commands[1].source_file == Path("/dev/null")
     assert commands[1].source_line_no == 4
     assert commands[2].execution_mode == ExecutionMode.ROOT
     assert commands[2].user == "root"
     assert commands[2].command == "ls"
     assert commands[2].assert_mode == AssertMode.LITERAL
-    assert commands[2].expected == "file\ndir\notherfile\n"
+    assert commands[2].expected == "file\ndir\notherfile"
     assert commands[2].source_file == Path("/dev/null")
     assert commands[2].source_line_no == 6
     assert commands[3].execution_mode == ExecutionMode.ROOT
@@ -402,12 +402,12 @@ def test_include(ispec_path, include_dirs, include_path):
     assert commands[0].source_line_no == 1
     assert commands[1].execution_mode == ExecutionMode.ROOT
     assert commands[1].command == "whoami"
-    assert commands[1].expected == "root\n"
+    assert commands[1].expected == "root"
     assert "test.ispec" in str(commands[1].source_file)
     assert commands[1].source_line_no == 1
     assert commands[2].execution_mode == ExecutionMode.ROOT
     assert commands[2].command == "ls"
-    assert commands[2].expected == "file\n"
+    assert commands[2].expected == "file"
     assert commands[2].source_file == ispec_path
     assert commands[2].source_line_no == 4
 
@@ -501,7 +501,7 @@ def test_command_short_literal():
         None,
         "local",
         AssertMode.LITERAL,
-        "a\nb\n",
+        "a\nb",
         "/some.ispec",
         1,
         "$ echo a\nb",

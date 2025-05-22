@@ -246,7 +246,7 @@ def command_local_echo_literal():
         None,
         "local",
         AssertMode.LITERAL,
-        "a\n",
+        "a",
         "/some.ispec",
         1,
         "$ echo a",
@@ -294,7 +294,7 @@ def command_remote_echo_literal():
         None,
         "remote",
         AssertMode.LITERAL,
-        "a\n",
+        "a",
         "/some.ispec",
         1,
         "$ echo a",
@@ -647,7 +647,7 @@ def test_logout(make_runner, ssh_config):
             None,
             "remote",
             AssertMode.LITERAL,
-            "a\n",
+            "a",
             "/some.ispec",
             1,
             "$ echo a",
@@ -671,7 +671,7 @@ def test_logout(make_runner, ssh_config):
             None,
             "remote",
             AssertMode.LITERAL,
-            "b\n",
+            "b",
             "/some.ispec",
             1,
             "$ echo a",
@@ -784,7 +784,7 @@ def test_runner_python_fail(mocker, make_runner, ssh_config):
     assert run_in_file.call_count == 1
 
 
-def test_environment(make_runner, ssh_config):
+def test_environment2(make_runner, ssh_config):
     runner, events = make_runner(ssh_config)
     specfile = Specfile("virtual.ispec")
 
@@ -800,7 +800,7 @@ def test_environment(make_runner, ssh_config):
             None,
             "remote",
             AssertMode.LITERAL,
-            "value__\n",
+            "value__",
             "/some.ispec",
             1,
             "$ echo $something",
