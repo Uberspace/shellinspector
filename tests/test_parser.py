@@ -140,6 +140,23 @@ def test_parse_whitespace_literal():
     assert commands[0].expected == "a\nb"
 
 
+def test_parse_whitespace_before_first():
+    specfile = parse(
+        "/dev/null",
+        make_stream(
+            [
+                "",
+                "% echo a",
+                "a",
+            ]
+        ),
+    )
+    commands, errors = (specfile.commands, specfile.errors)
+
+    assert len(errors) == 0, errors
+    assert len(commands) == 1
+
+
 def test_parse_whitespace_regex():
     specfile = parse(
         "/dev/null",

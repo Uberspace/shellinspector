@@ -224,6 +224,10 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
         if line.startswith("#"):
             continue
 
+        # empty line(s) before first command
+        if not line and not specfile.commands:
+            continue
+
         # include
         if line.startswith("<"):
             include_path = Path(line[1:].strip())
