@@ -1,1 +1,2 @@
+% export SI_USER=create_user_2
 % adduser -D create_user_2

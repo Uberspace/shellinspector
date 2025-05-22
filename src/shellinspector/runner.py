@@ -17,6 +17,7 @@ from pexpect.pxssh import ExceptionPxssh
 
 from shellinspector.logging import get_logger
 from shellinspector.parser import AssertMode
+from shellinspector.parser import Command
 from shellinspector.parser import ExecutionMode
 from shellinspector.parser import FixtureScope
 from shellinspector.parser import Specfile
@@ -297,6 +298,23 @@ class ShellRunner:
 
         return session
 
+    def _get_root_session(self, timeout_seconds):
+        return self._get_session(
+            Command(
+                ExecutionMode.ROOT,
+                "",
+                "root",
+                None,
+                "remote",
+                AssertMode.LITERAL,
+                "",
+                "",
+                0,
+                "",
+            ),
+            timeout_seconds,
+        )
+
     def _get_session(self, cmd, timeout_seconds):
         """
         Create or reuse a shell session used to run the given command.
@@ -422,7 +440,7 @@ class ShellRunner:
         )
 
     def run(self, specfile: Specfile, outer_used_sessions=None):
-        if outer_used_sessions:
+        if outer_used_sessions is not None:
             used_sessions = outer_used_sessions
         else:
             used_sessions = set()
@@ -438,6 +456,26 @@ class ShellRunner:
 
             for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
+
+                if cmd.user is None and cmd.host == "remote":
+                    root_env = self._get_root_session(
+                        specfile.settings.timeout_seconds
+                    ).get_environment()
+
+                    try:
+                        cmd.user = root_env["SI_USER"]
+                    except LookupError:
+                        self.report(
+                            RunnerEvent.COMMAND_FAILED,
+                            cmd,
+                            {
+                                "message": "Could not open session: no user was specified and $SI_USER is unset",
+                                "reasons": [],
+                            },
+                        )
+                        self.report(RunnerEvent.RUN_FAILED, None, {})
+                        return False
+
                 try:
                     session = self._get_session(cmd, specfile.settings.timeout_seconds)
                 except Exception as ex:

@@ -1,0 +1,8 @@
+%_ export SI_USER=testor
+%_ adduser -D ${SI_USER}
+# unlock user
+%_ passwd -u ${SI_USER}
+%_ cp -r /root/.ssh /home/${SI_USER}/
+%_ chown -R ${SI_USER}:${SI_USER} /home/${SI_USER}/.ssh
+$~ whoami
+testor

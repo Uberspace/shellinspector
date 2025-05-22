@@ -1,4 +1,3 @@
-import re
 from io import StringIO
 from pathlib import Path
 
@@ -192,7 +191,8 @@ def test_parse_no_user():
     )
 
     assert len(specfile.errors) == 0
-    assert specfile.commands[0].user == specfile.environment["SI_TEST_USER"]
+    assert specfile.commands[0].user is None
+    assert specfile.commands[0].host == "remote"
 
 
 def test_parse_error():
@@ -259,38 +259,6 @@ def test_parse_error_include():
     assert commands[1].expected
     assert commands[1].source_file == path.parent / "data/test_error.ispec"
     assert commands[1].source_line_no == 2
-
-
-def test_user_reuse():
-    specfile = parse(
-        "/dev/null",
-        make_stream(
-            [
-                "[someuser@]$ ls",
-                "$ ls",
-                "% ls",
-                "$ ls",
-                "[someuser@somehost]$ ls",
-                "$ ls",
-            ]
-        ),
-    )
-    commands, errors = (specfile.commands, specfile.errors)
-
-    assert len(errors) == 0
-
-    assert commands[0].user == "someuser"
-    assert commands[0].host == "remote"
-    assert commands[1].user == "someuser"
-    assert commands[1].host == "remote"
-    assert commands[2].user == "root"
-    assert commands[2].host == "remote"
-    assert commands[3].user == "someuser"
-    assert commands[3].host == "remote"
-    assert commands[4].user == "someuser"
-    assert commands[4].host == "somehost"
-    assert commands[5].user == "someuser"
-    assert commands[5].host == "somehost"
 
 
 def test_empty():
@@ -397,7 +365,7 @@ def test_include(ispec_path, include_dirs, include_path):
 
     assert commands[0].execution_mode == ExecutionMode.ROOT
     assert commands[0].command == "ls"
-    assert commands[0].expected == "file\n"
+    assert commands[0].expected == "file"
     assert commands[0].source_file == ispec_path
     assert commands[0].source_line_no == 1
     assert commands[1].execution_mode == ExecutionMode.ROOT
@@ -431,9 +399,6 @@ def test_environment():
     )
 
     assert len(specfile.errors) == 0
-
-    assert re.match(r"^t[0-9]+$", specfile.environment["SI_TEST_USER"])
-    del specfile.environment["SI_TEST_USER"]
 
     assert specfile.environment == {
         "something": "else",
@@ -583,7 +548,6 @@ def test_global_config_combine():
         ),
     )
 
-    del specfile.environment["SI_TEST_USER"]  # random value
     assert specfile.environment == {"FROM_ISPEC": 1}
     assert specfile.examples == [{"FROM_ISPEC": 1}]
 
@@ -594,7 +558,6 @@ def test_global_config_default():
         make_stream(["---", "---"]),
     )
 
-    del specfile.environment["SI_TEST_USER"]  # random value
     assert specfile.environment == {"FROM_CONFIG": 1}
     assert specfile.examples == [{"FROM_CONFIG": 1}]
     assert specfile.settings.timeout_seconds == 99
@@ -623,6 +586,6 @@ def test_fixture():
     assert specfile.fixture == "e2e/fixtures/create_user"
     assert not specfile.errors, specfile.errors
     assert specfile.fixture_specfile_pre
-    assert len(specfile.fixture_specfile_pre.commands) == 3
+    assert len(specfile.fixture_specfile_pre.commands) == 2
     assert specfile.fixture_specfile_post
-    assert len(specfile.fixture_specfile_post.commands) == 1
+    assert len(specfile.fixture_specfile_post.commands) == 2

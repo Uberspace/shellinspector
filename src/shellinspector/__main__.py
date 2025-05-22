@@ -110,8 +110,10 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
         except FileNotFoundError:
             pass
 
-    run_scoped_fixtures = {}
+    si_user_values = {}
+    handled_fixtures = set()
 
+    # Parse files
     for spec_file_path in spec_file_paths:
         spec_file = parse_spec_file(spec_file_path)
 
@@ -127,23 +129,38 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
         else:
             spec_files.append(spec_file)
 
-        if spec_file.fixture_scope == FixtureScope.RUN:
-            run_scoped_fixtures[spec_file.fixture] = spec_file
+    # run RUN scoped fixtures (pre)
+    for spec_file in spec_files:
+        if (
+            not spec_file.fixture_specfile_pre
+            or spec_file.fixture_scope != FixtureScope.RUN
+            or spec_file.fixture_specfile_pre.path in handled_fixtures
+        ):
+            continue
 
-    if run_scoped_fixtures:
-        print(f"Running {len(run_scoped_fixtures)} run-scoped pre-fixtures:")
+        handled_fixtures.add(spec_file.fixture_specfile_pre.path)
 
-        for spec_file in run_scoped_fixtures.values():
-            if not spec_file.fixture_specfile_pre:
-                continue
+        print()
+        print(
+            "run-scoped fixture: " + spec_file.fixture_specfile_pre.get_pretty_string()
+        )
+        sessions = set()
+        file_success = runner.run(spec_file.fixture_specfile_pre, sessions)
 
-            print()
-            print(spec_file.fixture_specfile_pre.get_pretty_string())
-            file_success = runner.run(spec_file.fixture_specfile_pre)
+        if not file_success:
+            print(colored(f"Fixture {spec_file.fixture} failed", "red"))
+            return 1
 
-            if not file_success:
-                print(colored(f"Fixture {spec_file.fixture} failed", "red"))
-                return 1
+        for session in sessions:
+            try:
+                si_user_values[
+                    spec_file.fixture_specfile_pre.path
+                ] = session.get_environment()["SI_USER"]
+                break
+            except Exception:
+                pass
+
+            session.pop_state()
 
         print()
 
@@ -151,31 +168,41 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
 
     print(f"Testing {len(spec_files)} spec files, including examples:")
 
+    # run actual tests
     for spec_file in spec_files:
         if len(spec_files) > 1:
             print()
             print(spec_file.get_pretty_string())
+
+        if spec_file.path in si_user_values:
+            si_user = si_user_values[spec_file.fixture_specfile_pre.path]
+            spec_file.environment["SI_USER"] = si_user
 
         file_success = runner.run(spec_file)
         if not file_success:
             failed_spec_files.append(spec_file)
         success = success & file_success
 
-    if run_scoped_fixtures:
+    # run RUN scoped fixtures (post)
+    for spec_file in spec_files:
+        if (
+            not spec_file.fixture_specfile_post
+            or spec_file.fixture_scope != FixtureScope.RUN
+            or spec_file.fixture_specfile_post.path in handled_fixtures
+        ):
+            continue
+
+        handled_fixtures.add(spec_file.fixture_specfile_post.path)
+
         print()
-        print(f"Running {len(run_scoped_fixtures)} run-scoped post-fixtures:")
+        print(
+            "run-scoped fixture: " + spec_file.fixture_specfile_post.get_pretty_string()
+        )
+        file_success = runner.run(spec_file.fixture_specfile_post)
 
-        for spec_file in run_scoped_fixtures.values():
-            if not spec_file.fixture_specfile_post:
-                continue
-
-            print()
-            print(spec_file.fixture_specfile_post.get_pretty_string())
-            file_success = runner.run(spec_file.fixture_specfile_post)
-
-            if not file_success:
-                print(colored(f"Fixture {spec_file.fixture} failed", "red"))
-                success = False
+        if not file_success:
+            print(colored(f"Fixture {spec_file.fixture} failed", "red"))
+            success = False
 
     if len(spec_files) > 1:
         print()

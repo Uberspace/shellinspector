@@ -1,1 +1,3 @@
-%_ deluser --remove-home create_user || true
+% echo $SI_USER
+create_user
+%_ deluser --remove-home $SI_USER || true

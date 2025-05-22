@@ -1,3 +1,2 @@
-% export USRNAME=create_user
-% adduser -D $USRNAME
-% export FIXTURE_SI_TEST_USER=$SI_TEST_USER
+% export SI_USER=create_user
+% adduser -D $SI_USER

@@ -1,6 +1,4 @@
 import dataclasses
-import math
-import random
 import re
 import typing
 from contextlib import suppress
@@ -201,7 +199,7 @@ def include_file(
 
         try:
             with open(include_path) as f:
-                return parse(include_path, f, specfile.environment.get("SI_TEST_USER"))
+                return parse(include_path, f)
         except FileNotFoundError:
             continue
 
@@ -265,25 +263,13 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
                 assert_mode if assert_mode else AssertMode.LITERAL.value
             )
 
+            # default $ lines w/o user@host to $SI_USER@remote
+            host = host or "remote"
+            user = user or None
+
+            # default % lines w/o user@host to root@remote
             if execution_mode == ExecutionMode.ROOT:
                 user = "root"
-
-            # reuse user and host from last command if not specified
-            try:
-                last_command = next(
-                    cmd
-                    for cmd in reversed(specfile.commands)
-                    if cmd.execution_mode == execution_mode
-                    or execution_mode == ExecutionMode.PYTHON
-                )
-                user = user or last_command.user
-                host = host or last_command.host
-            except (StopIteration, IndexError):
-                host = host or "remote"
-
-            if not user and execution_mode == ExecutionMode.USER and host != "local":
-                # default to randomly generated test user name
-                user = specfile.environment["SI_TEST_USER"]
 
             specfile.commands.append(
                 Command(
@@ -334,7 +320,6 @@ def parse_global_config(
 def parse(
     path: typing.Union[str, Path],
     stream: typing.IO,
-    si_test_user_name=None,
 ) -> Specfile:
     path = Path(path)
     specfile = Specfile(path)
@@ -386,11 +371,6 @@ def parse(
             continue
 
         setattr(specfile.settings, key.name, value)
-
-    if not si_test_user_name:
-        si_test_user_name = f"t{math.floor(random.uniform(0, 9999999)):>07}"
-
-    specfile.environment.setdefault("SI_TEST_USER", si_test_user_name)
 
     if specfile.fixture:
         specfile.fixture_specfile_pre = include_file(

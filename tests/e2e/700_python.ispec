@@ -1,8 +1,5 @@
-[test@remote]$ true
-# reuse user/host from above
-! set_env("did_python_run", "it did")
-[root@remote]! set_env("did_python_run", "or did it")
-! set_env("did_python_run", "or did it?")
+[test@remote]! set_env("did_python_run", "it did")
+[root@remote]! set_env("did_python_run", "or did it?")
 [test@remote]$ echo $did_python_run
 it did
 [root@remote]$ echo $did_python_run

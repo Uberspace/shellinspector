@@ -148,7 +148,8 @@ settings:
 The `_pre` fixture is run before the first spec file is executed, the `_post`
 fixture is run after the very last spec file, even if something failed. Since
 SSH sessions are established and closed for each spec file independently,
-changes to the shell environment by the fixture do not influence the tests.
+changes to the shell environment by the fixture do not influence the tests. The
+variable `SI_USER` is carried over anyway.
 
 Not specifying a scope is equivalent to:
 
@@ -268,9 +269,9 @@ a
 
 ## Target user & machine
 
-By default commands run inside the uberspace8 VM as the specified user (`%` for
-root, `$` for the user last specified). To override this, expand the lines to
-look like a shell prompt:
+Use `[user@host]` to specify which user and host will be used for the
+connection. `host` may be either `local` for the machine actually running
+shellinspector or `remote` for the machine specified as `--target`:
 
 ```
 # run on the local dev/ci machine
@@ -279,15 +280,27 @@ luto-portable
 # run as a different user on uberspace8 VM
 [usr1@remote]$ whoami
 usr1
-# run as the user last specified, in this case usr1
-$ whoam
-usr1
 ```
 
-Using `$` without a specified user as the first `$`-command will cause a random
-username like `t1234567` to be used. The username is constant per .spec file.
-Keep in mind that this test user is not actually created on the host. You have
-to create it yourself based on the username in `$SI_TEST_USER`.
+Since this is quite verbose, there are two shorcuts:
+
+- Use just `% whoami` as a shorthand for `root@remote`.
+- Use just `$ whoami` will connect to `remote` as the user specified in the
+  `$SI_USER` envrionment variable of any open session.
+
+```
+% whoami
+root
+% hostname -f
+remote.example.org
+% export SI_USER=testor
+$ whoami
+testor
+% hostname -f
+remote.example.org
+```
+
+Using `$` without setting `$SI_USER` will cause an error.
 
 ## Sessions
 
@@ -377,7 +390,6 @@ snippets like so:
 `test.ispec`:
 
 ```
-! check_postgres_connection("testy")
 [@local]! set_env("did_python_run", "it did")
 [@local]$ echo $did_python_run
 it did

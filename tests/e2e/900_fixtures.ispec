@@ -4,8 +4,7 @@ settings:
   fixture_dirs:
     - fixtures
 ---
-% test "$FIXTURE_SI_TEST_USER" = "$SI_TEST_USER"
-% echo $USRNAME
+% echo $SI_USER
 create_user
-%~ id $USRNAME
+%~ id $SI_USER
 create_user
