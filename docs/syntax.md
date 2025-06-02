@@ -2,7 +2,7 @@
 
 First, prepare a spec file, e.g. `ssh_connection.ispec`:
 
-```
+```shell
 % whoami
 root
 % pwd
@@ -11,7 +11,7 @@ root
 
 Then, run it:
 
-```
+```shell
 $ shellinspector tests/ssh_connection.ispec
 Testing 1 spec files, including examples:
 PASS % whoami
@@ -20,7 +20,7 @@ PASS % pwd
 
 You can also specify multiple files:
 
-```
+```shell
 $ shellinspector tests/ssh_connection.ispec tests/other.ispec
 Testing 2 spec files, including examples:
 
@@ -53,7 +53,7 @@ also stopped, if a `.git` directory is found, assuming this is the project root.
 
 You can use all settings available in Frontmatter here.
 
-```
+```yaml
 settings:
   timeout_seconds: 10
   include_dirs:
@@ -71,7 +71,7 @@ values are set using an optional YAML section at the start of the file. This
 takes precedence over the values provided in the config file. The `settings`
 dict gets merged, all other values are overwritten completely.
 
-```
+```yaml
 ---
 environment:
   A: B
@@ -90,7 +90,7 @@ All lines (except expected output) start with a prefix character (`P`), followed
 by arguments (`command`). The following lines specify an expected output
 (`expected out put ...`).
 
-```
+```shell
 P command
 expected
 output
@@ -106,17 +106,17 @@ You can then use the fixture like so, in `test.ispec`:
 
 `_pre`:
 
-```
+```shell
 % useradd testuser
 ```
 
 `_post`:
 
-```
+```shell
 % userdel testuser
 ```
 
-```
+```yaml
 ---
 fixture: user_create
 settings:
@@ -133,7 +133,7 @@ By default fixtures run at the start and end of a specfile. Sometimes setup and
 teardown tasks are only required once for all spec files within a run. In that
 case, you can use run-fixtures:
 
-```
+```yaml
 ---
 fixture:
   name: user_create
@@ -153,7 +153,7 @@ variable `SI_USER` is carried over anyway.
 
 Not specifying a scope is equivalent to:
 
-```
+```yaml
 fixture:
   name: ...
   scope: file
@@ -164,7 +164,7 @@ fixture:
 To plainly interact with the shell as the root user or from within an uberspace,
 start the line with `$` (user) or `%` (root):
 
-```
+```shell
 % whoami
 root
 $ whoami
@@ -180,7 +180,7 @@ command prints out. There are multiple
 
 Ensure the output of the command matches the specified exactly:
 
-```
+```shell
 % head -n2 /etc/passwd
 root:x:0:0:root:/root:/bin/bash
 bin:x:1:1:bin:/bin:/usr/bin/nologin
@@ -192,7 +192,7 @@ lines before or after the actual or expected output.
 To test for dynamic values, you can get the value of shell variables using the
 `{VAR}` syntax, like so:
 
-```
+```shell
 $ whoami
 {USER}
 ```
@@ -202,7 +202,7 @@ $ whoami
 Interpret the specified output as a regex with `re.MULTILINE` and try to match
 it:
 
-```
+```shell
 %~ ls /home
 .*testuser.*
 %~ cat /etc/passwd
@@ -217,7 +217,7 @@ end of the regex.
 New lines are only preserved between lines, but not after the final one.
 Otherwise this would never match, since `r"aaaa\n"` can't match `aaaa`.
 
-```
+```shell
 $~ echo aaaab
 aaaa
 ```
@@ -230,7 +230,7 @@ take care to not name any env variables after numbers.
 
 To just discard and ignore the output, use `_`:
 
-```
+```shell
 %_ ls /home
 %
 ```
@@ -241,7 +241,7 @@ If a set of command repeates over and over in different spec files, you can
 extract it into a dedicated file to be used in different files. For example,
 creating a user happens over and over. Put it into `create_user.ispec`.
 
-```
+```shell
 % uberspace user create -u testuser
 ```
 
@@ -249,7 +249,7 @@ Then, include it into other files by using `<` and the path. The given path
 is relative to the paths listed in the `include_dirs` key in the config file,
 plus the directory of the current spec file, in that order.
 
-```
+```shell
 < create_user.ispec
 % ls /home
 testuser
@@ -259,7 +259,7 @@ testuser
 
 Any lines starting with `#` are ignored:
 
-```
+```shell
 # the next line will run the command `echo`:
 $ echo a
 a
@@ -273,7 +273,7 @@ Use `[user@host]` to specify which user and host will be used for the
 connection. `host` may be either `local` for the machine actually running
 shellinspector or `remote` for the machine specified as `--target`:
 
-```
+```shell
 # run on the local dev/ci machine
 [@local]$ hostname
 luto-portable
@@ -288,7 +288,7 @@ Since this is quite verbose, there are two shorcuts:
 - Use just `$ whoami` will connect to `remote` as the user specified in the
   `$SI_USER` envrionment variable of any open session.
 
-```
+```shell
 % whoami
 root
 % hostname -f
@@ -308,7 +308,7 @@ You can connect to the test host more than once by adding `:session_name` to the
 username. Here we connect twice, change into two different directories and then
 check that the sessions are still separate:
 
-```
+```shell
 [vagrant:session1@remote]$ cd photos
 [vagrant:session2@remote]$ cd videos
 [vagrant:session1@remote]$ pwd
@@ -322,7 +322,7 @@ check that the sessions are still separate:
 Use the `logout` command to terminate a session. If you use the same
 user/session-name/host again, a new one will start automatically.
 
-```
+```shell
 [@local]$ echo a
 a
 [@local]$ logout
@@ -335,7 +335,7 @@ b
 Exit codes of all commands are checked automatically. If the code is >0, the
 command is considered a failure:
 
-```
+```shell
 $ python -m test false.ispec
 running false.ispec
 FAIL $ test -d /etc/nonexistant
@@ -344,7 +344,7 @@ command failed (RC=1)
 
 To ignore the check, hide the return code like so:
 
-```
+```shell
 $ test -d /etc/nonexistant || true
 ```
 
@@ -355,7 +355,7 @@ frontmatter:
 
 `test.ispec`:
 
-```
+```yaml
 ---
 environment:
   DNS_SERVER: 1.1.1.1
@@ -370,7 +370,7 @@ To run many similar tests, add an `examples` key to the frontmatter:
 
 `test.ispec`:
 
-```
+```yaml
 ---
 examples:
   - PY_EXE: python3.11
@@ -389,7 +389,7 @@ snippets like so:
 
 `test.ispec`:
 
-```
+```shell
 [@local]! set_env("did_python_run", "it did")
 [@local]$ echo $did_python_run
 it did
@@ -418,7 +418,7 @@ session is used for `ctx.env`.
 
 ## Examples
 
-```
+```shell
 # Create a user and check the default python version
 < create_user.ispec
 $~ python --version
