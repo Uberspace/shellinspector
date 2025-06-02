@@ -1,0 +1,13 @@
+% cat >foo <<HERE
+foo
+bar
+HERE
+% cat foo
+foo
+bar
+% cat <<HERE
+fooHERE
+HEREbar
+HERE
+fooHERE
+HEREbar

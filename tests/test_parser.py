@@ -179,6 +179,29 @@ def test_parse_whitespace_regex():
     )
 
 
+def test_parse_here_doc():
+    specfile = parse(
+        "/dev/null",
+        make_stream(
+            [
+                "% cat <<HERE",
+                "fooHERE",
+                "bar",
+                "HERE",
+                "foo",
+                "bar",
+            ]
+        ),
+    )
+    commands, errors = (specfile.commands, specfile.errors)
+
+    assert len(errors) == 0
+    assert len(commands) == 1
+
+    assert commands[0].command == "cat <<HERE\nfooHERE\nbar\nHERE"
+    assert commands[0].expected == "foo\nbar"
+
+
 def test_parse_no_user():
     specfile = parse(
         "/dev/null",

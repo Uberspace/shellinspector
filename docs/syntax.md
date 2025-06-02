@@ -97,6 +97,24 @@ output
 ...
 ```
 
+## HERE documents
+
+HERE documents are also supported, allowing you to specify multi-line input to
+commands. This can be used to create multi-line files, like so:
+
+```shell
+% cat >foo <<HERE
+foo
+bar
+HERE
+% cat foo
+foo
+bar
+```
+
+Please note that for usage within shellinspector the syntax needs to be exactly
+has shown above - `<<HERE` at the very end and `HERE` as the deliminator.
+
 ## Fixtures
 
 This setting can be used to define a set of commands that are run before and

@@ -32,6 +32,7 @@ class Command:
     source_file: Path
     source_line_no: int
     line: str
+    has_heredoc: bool
 
     def get_line_with_variables(self, env):
         line = self.line
@@ -251,6 +252,11 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
             )
             continue
 
+        try:
+            last_command = specfile.commands[-1]
+        except IndexError:
+            last_command = None
+
         # start of a new command
         if prefix:
             command = line[prefix.span()[1] :]
@@ -271,6 +277,11 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
             if execution_mode == ExecutionMode.ROOT:
                 user = "root"
 
+            if command.endswith("<<HERE"):
+                has_heredoc = True
+            else:
+                has_heredoc = False
+
             specfile.commands.append(
                 Command(
                     execution_mode,
@@ -283,11 +294,15 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
                     specfile.path,
                     line_no,
                     line,
+                    has_heredoc,
                 )
             )
+        elif last_command.has_heredoc and not last_command.command.endswith("\nHERE"):
+            # add additional lines from HERE doc
+            last_command.command += "\n" + line
         else:
-            # add output line to last command
-            specfile.commands[-1].expected += line + "\n"
+            # add output line
+            last_command.expected += line + "\n"
 
     for cmd in specfile.commands:
         if cmd.assert_mode == AssertMode.REGEX:

@@ -417,6 +417,9 @@ class ShellRunner:
             )
             return False
 
+        if cmd.has_heredoc:
+            command_output = re.sub(r"^(> )*", "", command_output)
+
         try:
             rc_output = session.run_command("echo $?")
         except TimeoutException as ex:
