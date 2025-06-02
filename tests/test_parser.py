@@ -493,6 +493,7 @@ def test_command_short_literal():
         "/some.ispec",
         1,
         "$ echo a\nb",
+        False,
     )
     assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, LITERAL)"
 
@@ -509,6 +510,7 @@ def test_command_expected_with_args():
         "/some.ispec",
         1,
         "$ echo a\nb",
+        False,
     )
     assert cmd.get_expected_with_vars({"a": "b"}) == "b{1}{unused}{open"
 
@@ -525,6 +527,7 @@ def test_command_short_regex():
         "/some.ispec",
         1,
         "$ echo a\nb",
+        False,
     )
     assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, REGEX)"
 
