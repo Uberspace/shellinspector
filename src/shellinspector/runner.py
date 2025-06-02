@@ -493,7 +493,9 @@ class ShellRunner:
                 if cmd.execution_mode == ExecutionMode.PYTHON:
                     ctx = ShellinspectorPyContext({}, {})
                     filename = specfile.path.with_suffix(".ispec.py")
-                    ctx.env = session.get_environment()
+                    ctx.env = {}
+                    ctx.env.update(self.context)
+                    ctx.env.update(session.get_environment())
                     original_env = ctx.env.copy()
 
                     try:

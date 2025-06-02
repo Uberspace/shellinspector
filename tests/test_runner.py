@@ -693,6 +693,7 @@ def test_runner_python(mocker, make_runner, ssh_config):
         assert filename == Path("virtual.ispec.py")
         assert isinstance(si_context.env, dict)
         assert si_context.env["HOME"] == "/root"
+        assert si_context.env["SI_TARGET"] == "mock"
         assert code == "return_true()"
 
         return True
@@ -702,7 +703,7 @@ def test_runner_python(mocker, make_runner, ssh_config):
         side_effect=fake_run_in_file,
     )
 
-    runner, events = make_runner(ssh_config)
+    runner, events = make_runner(ssh_config, {"SI_TARGET": "mock"})
     specfile = Specfile("virtual.ispec")
 
     specfile.commands = [
