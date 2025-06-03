@@ -49,6 +49,9 @@ jobs:
           chmod 0600 tests/keys/id_ed25519
       - name: Run tests
         run: |
+          export PAGER=less
+      - name: Run tests
+        run: |
           hatch run default:cov
       - name: Run integration test
         run: >
