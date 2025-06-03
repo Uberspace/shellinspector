@@ -1,0 +1,4 @@
+[@local]$ echo $OUTSIDE_PAGER1
+alessa
+[@local]$ echo $OUTSIDE_PAGER2
+bless

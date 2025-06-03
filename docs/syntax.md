@@ -369,7 +369,8 @@ $ test -d /etc/nonexistant || true
 ## Environment
 
 To set envrionment variables for this test run, add an `envrionment` key to the
-frontmatter:
+frontmatter. `$VARIABLES` and `${VARIABLES}` are interpreted within the values
+of these entries using the shell environment of the controller.
 
 `test.ispec`:
 
@@ -377,9 +378,12 @@ frontmatter:
 ---
 environment:
   DNS_SERVER: 1.1.1.1
+  OUTSIDE_PAGER: $PAGER
 ---
 $ echo $DNS_SERVER
 1.1.1.1
+$ echo $OUTSIDE_PAGER
+less
 ```
 
 ## Parametrized tests

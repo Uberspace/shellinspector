@@ -1,0 +1,9 @@
+---
+environment:
+  OUTSIDE_PAGER1: a${PAGER}a
+  OUTSIDE_PAGER2: b$PAGER
+---
+[@local]$ echo $OUTSIDE_PAGER1
+alessa
+[@local]$ echo $OUTSIDE_PAGER2
+bless

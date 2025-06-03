@@ -1,4 +1,5 @@
 import dataclasses
+import os
 import re
 import typing
 from contextlib import suppress
@@ -386,6 +387,16 @@ def parse(
             continue
 
         setattr(specfile.settings, key.name, value)
+
+    for sk, sv in specfile.environment.items():
+        if not isinstance(sv, str):
+            continue
+
+        for ek, ev in os.environ.items():
+            sv = sv.replace(f"${ek}", ev)
+            sv = sv.replace(f"${{{ek}}}", ev)
+
+        specfile.environment[sk] = sv
 
     if specfile.fixture:
         specfile.fixture_specfile_pre = include_file(
