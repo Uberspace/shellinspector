@@ -6,3 +6,5 @@ test1
 
 
 test2
+[@local]$ echo "   a"
+   a

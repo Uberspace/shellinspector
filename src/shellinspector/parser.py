@@ -309,7 +309,7 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
             # remove trailing new lines for regexes, see syntax.md
             cmd.expected = cmd.expected.rstrip("\n")
         elif cmd.assert_mode == AssertMode.LITERAL:
-            cmd.expected = cmd.expected.strip("\n")
+            cmd.expected = cmd.expected.strip("\r\n")
 
 
 def parse_global_config(

@@ -363,7 +363,7 @@ class ShellRunner:
     def _check_result(self, cmd, command_output, returncode, env):
         expected = cmd.get_expected_with_vars(env)
         if cmd.assert_mode == AssertMode.LITERAL:
-            output_matches = command_output.strip() == expected
+            output_matches = command_output.strip("\r\n") == expected
         elif cmd.assert_mode == AssertMode.REGEX:
             output_matches = re.search(expected, command_output, re.MULTILINE)
         elif cmd.assert_mode == AssertMode.IGNORE:
