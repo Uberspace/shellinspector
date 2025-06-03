@@ -388,6 +388,22 @@ def parse(
 
         setattr(specfile.settings, key.name, value)
 
+    global_env = config.get("environment", {})
+    frontmatter_env = frontmatter_settings.get("environment", {})
+
+    for key in global_env.keys():
+        value = None
+
+        with suppress(LookupError):
+            value = global_env[key]
+            root_path = config_path.parent
+
+        with suppress(LookupError):
+            value = frontmatter_env[key]
+            root_path = specfile.path.parent
+
+        specfile.environment[key] = value
+
     for sk, sv in specfile.environment.items():
         if not isinstance(sv, str):
             continue

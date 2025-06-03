@@ -69,7 +69,8 @@ All given relative paths are relative to the `shellinspector.yaml` file itself.
 Shellinspector can be configured in various ways outlined below. These config
 values are set using an optional YAML section at the start of the file. This
 takes precedence over the values provided in the config file. The `settings`
-dict gets merged, all other values are overwritten completely.
+and the `environment` dicts gets merged, all other values are overwritten
+completely.
 
 ```yaml
 ---

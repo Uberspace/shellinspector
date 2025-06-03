@@ -7,3 +7,6 @@ environment:
 alessa
 [@local]$ echo $OUTSIDE_PAGER2
 bless
+# from shellinspector.yaml
+[@local]$ echo $OUTSIDE_PAGER3
+cless

@@ -574,7 +574,7 @@ def test_global_config_combine():
         ),
     )
 
-    assert specfile.environment == {"FROM_ISPEC": 1}
+    assert specfile.environment == {"FROM_ISPEC": 1, "FROM_CONFIG": 1}
     assert specfile.examples == [{"FROM_ISPEC": 1}]
 
 
