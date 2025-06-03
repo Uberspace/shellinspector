@@ -10,7 +10,7 @@
 
 Use `hatch run` to start shellinspector:
 
-```
+```shell
 $ hatch run python -m shellinspector
 usage: __main__.py [-h] [--target-host TARGET_HOST] spec_files [spec_files ...]
 __main__.py: error: the following arguments are required: spec_files
@@ -21,7 +21,7 @@ __main__.py: error: the following arguments are required: spec_files
 Testing is done using `pytest`. You can test using the python version you used
 to install hatch using
 
-```
+```shell
 $ hatch run default:cov
 ========== test session starts ==========
 platform linux -- Python 3.10.10, pytest-7.2.2, pluggy-1.0.0
@@ -42,13 +42,13 @@ check `htmlcov/index.html`.
 Use `docker-compose` to start a local SSH server on port `2222` with root access
 using the `tests/keys/id_ed25519` key.
 
-```
+```shell
 $ docker-compose up -d
 ```
 
 Then, use `--target` and `--identity` to run tests:
 
-```
+```shell
 $ hatch run python -m shellinspector tests/e2e/*.ispec --target 127.0.0.1:2222 --identity tests/keys/id_ed25519
 PASS % whoami
 PASS [whoami@remote]% whoami
@@ -61,13 +61,13 @@ PASS % echo a
 
 To release a version, first bump the version (`patch`, `minor`, `major`):
 
-```
+```shell
 hatch version minor
 ```
 
 Then share it with the world:
 
-```
+```shell
 git add src/shellinspector/__about__.py
 git commit -m "v$(hatch version)"
 git tag "v$(hatch version)"

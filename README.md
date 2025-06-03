@@ -7,7 +7,7 @@ back.
 
 First, prepare a spec file, e.g. `readme.ispec`:
 
-```
+```shell
 [@local]$~ ping -c1 google.com
 1 packets transmitted
 [@local]$ whoami
@@ -16,7 +16,7 @@ shellinspector
 
 Then, run it:
 
-```
+```shell
 $ python -m shellinspector readme.ispec
 running readme.console
 PASS [@local]$~ ping -c1 google.com

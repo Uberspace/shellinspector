@@ -11,7 +11,7 @@ These are the same regardless of the host the test is running on, e.g. for
 
 ## Example Usage
 
-```
+```shell
 [@local]$ echo $SI_TARGET
 something.uberspace.de
 [@local]$ echo $SI_TARGET_SSH_PORT
