@@ -494,12 +494,16 @@ class ShellRunner:
                     self.report(RunnerEvent.RUN_FAILED, None, {})
                     return False
 
+                if session not in used_sessions:
+                    used_sessions.add(session)
+                    session.set_environment(specfile.environment)
+                    session.set_environment(self.context)
+                    session.push_state()
+
                 if cmd.execution_mode == ExecutionMode.PYTHON:
                     ctx = ShellinspectorPyContext({}, {})
                     filename = specfile.path.with_suffix(".ispec.py")
-                    ctx.env = {}
-                    ctx.env.update(self.context)
-                    ctx.env.update(session.get_environment())
+                    ctx.env = session.get_environment()
                     original_env = ctx.env.copy()
 
                     try:
@@ -541,12 +545,6 @@ class ShellRunner:
                             {"returncode": 0, "actual": ""},
                         )
                         continue
-
-                    if session not in used_sessions:
-                        used_sessions.add(session)
-                        session.set_environment(specfile.environment)
-                        session.set_environment(self.context)
-                        session.push_state()
 
                     if not self._run_command(session, cmd):
                         self.report(RunnerEvent.RUN_FAILED, None, {})

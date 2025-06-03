@@ -8,6 +8,8 @@ settings:
 ---
 % echo $SI_USER
 create_user_2
+[@local]$ echo $SI_USER
+create_user_2
 %~ id create_user_2
 create_user_2
 % test ! -f /home/create_user_2/910_fixtures_run_test

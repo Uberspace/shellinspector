@@ -174,7 +174,10 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
             print()
             print(spec_file.get_pretty_string())
 
-        if spec_file.path in si_user_values:
+        if (
+            spec_file.fixture_specfile_pre
+            and spec_file.fixture_specfile_pre.path in si_user_values
+        ):
             si_user = si_user_values[spec_file.fixture_specfile_pre.path]
             spec_file.environment["SI_USER"] = si_user
 
