@@ -228,8 +228,13 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
         if not line and not specfile.commands:
             continue
 
+        try:
+            last_command = specfile.commands[-1]
+        except IndexError:
+            last_command = None
+
         # include
-        if line.startswith("<"):
+        if line.startswith("<") and not (last_command and last_command.has_heredoc):
             include_path = Path(line[1:].strip())
             included_specfile = include_file(
                 specfile, line_no, line, specfile.settings.include_dirs, include_path
@@ -252,11 +257,6 @@ def parse_commands(specfile: Specfile, commands: str) -> None:
                 )
             )
             continue
-
-        try:
-            last_command = specfile.commands[-1]
-        except IndexError:
-            last_command = None
 
         # start of a new command
         if prefix:

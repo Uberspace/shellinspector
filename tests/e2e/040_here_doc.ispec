@@ -1,10 +1,12 @@
 % cat >foo <<HERE
 foo
 bar
+<test
 HERE
-% cat foo
+%~ cat foo
 foo
 bar
+\<test
 % cat <<HERE
 fooHERE
 HEREbar
