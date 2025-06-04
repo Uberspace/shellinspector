@@ -140,7 +140,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
 
         handled_fixtures.add(spec_file.fixture_specfile_pre.path)
 
-        print()
+        print(" ")  # make blank lines show up in gitlab-ci, print()s get swallowed
         print(
             "run-scoped fixture: " + spec_file.fixture_specfile_pre.get_pretty_string()
         )
@@ -162,7 +162,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
 
             session.pop_state()
 
-        print()
+        print(" ")
 
     failed_spec_files = []
 
@@ -171,7 +171,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
     # run actual tests
     for spec_file in spec_files:
         if len(spec_files) > 1:
-            print()
+            print(" ")
             print(spec_file.get_pretty_string())
 
         if (
@@ -197,7 +197,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
 
         handled_fixtures.add(spec_file.fixture_specfile_post.path)
 
-        print()
+        print(" ")
         print(
             "run-scoped fixture: " + spec_file.fixture_specfile_post.get_pretty_string()
         )
@@ -208,7 +208,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
             success = False
 
     if len(spec_files) > 1:
-        print()
+        print(" ")
         if success:
             print(colored("All spec files succeeded.", "green"))
         else:
@@ -221,7 +221,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
         with open(".si-retry", "w") as f:
             f.write("\n".join(str(s.path) for s in failed_spec_files) + "\n")
 
-        print()
+        print(" ")
         print("Wrote .si-retry file, the next run will only run these spec files.")
 
     return 0 if success else 1
