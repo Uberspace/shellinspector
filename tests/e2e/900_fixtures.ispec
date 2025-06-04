@@ -8,3 +8,5 @@ settings:
 create_user
 %~ id $SI_USER
 create_user
+[@local]$ echo ${SI_USER}
+create_user

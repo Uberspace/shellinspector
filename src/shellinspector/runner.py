@@ -458,6 +458,20 @@ class ShellRunner:
                 if not pre_success:
                     return False
 
+                si_user = None
+                for session in used_sessions:
+                    try:
+                        si_user = session.get_environment()["SI_USER"]
+                        break
+                    except Exception:
+                        pass
+
+                if si_user:
+                    specfile.environment["SI_USER"] = si_user
+
+                    for session in used_sessions:
+                        session.set_environment({"SI_USER": si_user})
+
             for cmd in specfile.commands:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
 
