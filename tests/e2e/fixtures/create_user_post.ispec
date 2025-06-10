@@ -1,3 +1,5 @@
+[@local]$ echo $SI_USER
+create_user
 % echo $SI_USER
 create_user
 %_ deluser --remove-home $SI_USER || true
