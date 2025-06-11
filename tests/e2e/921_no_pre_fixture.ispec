@@ -1,0 +1,8 @@
+---
+fixture: no_pre_fixture
+settings:
+  fixture_dirs:
+    - fixtures
+---
+% echo a
+a

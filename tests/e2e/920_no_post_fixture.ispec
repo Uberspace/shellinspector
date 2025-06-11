@@ -1,0 +1,8 @@
+---
+fixture: no_post_fixture
+settings:
+  fixture_dirs:
+    - fixtures
+---
+% echo a
+a

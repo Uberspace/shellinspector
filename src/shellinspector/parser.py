@@ -194,7 +194,13 @@ def parse_yaml_multidoc(stream: typing.IO) -> tuple[dict, str]:
 
 
 def include_file(
-    specfile: Specfile, line_no, line, dirs: list[Path], file_path: Path
+    specfile: Specfile,
+    line_no,
+    line,
+    dirs: list[Path],
+    file_path: Path,
+    *,
+    raise_exception=False,
 ) -> typing.Optional[Specfile]:
     for include_dir in dirs:
         include_path = (include_dir / file_path).resolve()
@@ -208,14 +214,21 @@ def include_file(
         break
     else:
         dirs_str = [str(d) for d in dirs]
-        specfile.errors.append(
-            Error(
-                specfile.path,
-                line_no,
-                line,
-                f"error: {file_path} does not exist in any directory: {','.join(dirs_str)}",
-            )
+        error = (
+            f"error: {file_path} does not exist in any directory: {','.join(dirs_str)}"
         )
+
+        if raise_exception:
+            raise FileNotFoundError(error)
+        else:
+            specfile.errors.append(
+                Error(
+                    specfile.path,
+                    line_no,
+                    line,
+                    error,
+                )
+            )
 
 
 def parse_commands(specfile: Specfile, commands: str) -> None:
@@ -414,24 +427,48 @@ def parse(
 
         specfile.environment[sk] = sv
 
+    fixture_found = False
+
     if specfile.fixture:
-        specfile.fixture_specfile_pre = include_file(
-            specfile,
-            0,
-            "fixture_pre",
-            specfile.settings.fixture_dirs,
-            Path(f"{specfile.fixture}_pre.ispec"),
-        )
+        try:
+            specfile.fixture_specfile_pre = include_file(
+                specfile,
+                0,
+                "fixture_pre",
+                specfile.settings.fixture_dirs,
+                Path(f"{specfile.fixture}_pre.ispec"),
+                raise_exception=True,
+            )
+            fixture_found = True
+        except FileNotFoundError:
+            pass
 
     parse_commands(specfile, commands)
 
     if specfile.fixture:
-        specfile.fixture_specfile_post = include_file(
-            specfile,
-            0,
-            "fixture_post",
-            specfile.settings.fixture_dirs,
-            Path(f"{specfile.fixture}_post.ispec"),
+        try:
+            specfile.fixture_specfile_post = include_file(
+                specfile,
+                0,
+                "fixture_post",
+                specfile.settings.fixture_dirs,
+                Path(f"{specfile.fixture}_post.ispec"),
+                raise_exception=True,
+            )
+            fixture_found = True
+        except FileNotFoundError:
+            pass
+
+    if not fixture_found:
+        dirs_str = [str(d) for d in specfile.settings.fixture_dirs]
+
+        specfile.errors.append(
+            Error(
+                specfile.path,
+                0,
+                "fixture",
+                f"error: fixture {specfile.fixture} does not exist in any directory: {','.join(dirs_str)}",
+            )
         )
 
     return specfile
