@@ -459,7 +459,7 @@ def parse(
         except FileNotFoundError:
             pass
 
-    if not fixture_found:
+    if specfile.fixture and not fixture_found:
         dirs_str = [str(d) for d in specfile.settings.fixture_dirs]
 
         specfile.errors.append(
