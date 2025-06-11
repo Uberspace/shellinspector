@@ -172,7 +172,7 @@ RE_PREFIX = re.compile(
 def parse_yaml_multidoc(stream: typing.IO) -> tuple[dict, str]:
     if stream.read(3) != "---":
         stream.seek(0)
-        return {}, stream.read()
+        return {}, stream.read(), 0
     else:
         stream.seek(0)
 
@@ -190,7 +190,10 @@ def parse_yaml_multidoc(stream: typing.IO) -> tuple[dict, str]:
     if frontmatter is None:
         frontmatter = {}
 
-    return frontmatter, commands
+    stream.seek(0)
+    command_offset_lines = stream.read(loader.pointer).count("\n")
+    command_offset_lines += 1  # account for --- line
+    return frontmatter, commands, command_offset_lines
 
 
 def include_file(
@@ -231,8 +234,10 @@ def include_file(
             )
 
 
-def parse_commands(specfile: Specfile, commands: str) -> None:
-    for line_no, line in enumerate(commands.splitlines(), 1):
+def parse_commands(
+    specfile: Specfile, commands: str, command_offset_lines: int
+) -> None:
+    for line_no, line in enumerate(commands.splitlines(), command_offset_lines + 1):
         # comment
         if line.startswith("#"):
             continue
@@ -355,7 +360,7 @@ def parse(
 
     config, config_path = parse_global_config(path)
 
-    frontmatter, commands = parse_yaml_multidoc(stream)
+    frontmatter, commands, command_offset_lines = parse_yaml_multidoc(stream)
 
     # use values in frontmatter if they exist, otherwise use global config
     for key in ["examples", "environment", "fixture", "tags"]:
@@ -443,7 +448,7 @@ def parse(
         except FileNotFoundError:
             pass
 
-    parse_commands(specfile, commands)
+    parse_commands(specfile, commands, command_offset_lines)
 
     if specfile.fixture:
         try:
