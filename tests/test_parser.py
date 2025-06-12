@@ -139,6 +139,26 @@ def test_parse_whitespace_literal():
     assert commands[0].expected == "a\nb"
 
 
+def test_parse_si_user_session():
+    specfile = parse(
+        "/dev/null",
+        make_stream(
+            [
+                "[:session1@]$ whoami",
+                "testor",
+            ]
+        ),
+    )
+    commands, errors = (specfile.commands, specfile.errors)
+
+    assert len(errors) == 0, errors
+    assert len(commands) == 1
+
+    assert commands[0].host == "remote"
+    assert commands[0].user is None
+    assert commands[0].session_name == "session1"
+
+
 def test_parse_whitespace_before_first():
     specfile = parse(
         "/dev/null",

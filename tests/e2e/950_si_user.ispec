@@ -6,3 +6,7 @@
 %_ chown -R ${SI_USER}:${SI_USER} /home/${SI_USER}/.ssh
 $~ whoami
 testor
+[:session1@]$ whoami
+testor
+[:session2@]$ whoami
+testor
