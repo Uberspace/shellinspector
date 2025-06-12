@@ -24,39 +24,45 @@ def make_stream(lines, frontmatter=None):
 
 
 @pytest.mark.parametrize(
-    "input,frontmatter,tests",
+    "input,frontmatter,tests,command_offset_lines",
     [
         (
             "",
             {},
             "",
+            0,
         ),
         (
             "a\nb\nc",
             {},
             "a\nb\nc",
+            0,
         ),
         (
             "---\n{'a': 1}",
             {"a": 1},
             "",
+            2,
         ),
         (
             "---\n{'a': 1}\n---\na\nb\nc",
             {"a": 1},
             "a\nb\nc",
+            3,
         ),
         (
             "---\n\n---\n% echo ab\na\nb\n",
             {},
             "% echo ab\na\nb\n",
+            3,
         ),
     ],
 )
-def test_parse_yaml_multidoc(input, frontmatter, tests):
-    rfrontmatter, rtests = parse_yaml_multidoc(StringIO(input))
+def test_parse_yaml_multidoc(input, frontmatter, tests, command_offset_lines):
+    rfrontmatter, rtests, rcommand_offset_lines = parse_yaml_multidoc(StringIO(input))
     assert rfrontmatter == frontmatter
     assert rtests == tests
+    assert rcommand_offset_lines == command_offset_lines
 
 
 def test_parse():
@@ -290,7 +296,7 @@ def test_parse_error_include():
 
     assert len(errors) == 1
     assert errors[0].source_file == path.parent / "data/test_error.ispec"
-    assert errors[0].source_line_no == 1
+    assert errors[0].source_line_no == 3
     assert errors[0].source_line == "a"
 
     assert len(commands) == 2
@@ -301,7 +307,7 @@ def test_parse_error_include():
     assert commands[1].command == "ls2"
     assert commands[1].expected
     assert commands[1].source_file == path.parent / "data/test_error.ispec"
-    assert commands[1].source_line_no == 2
+    assert commands[1].source_line_no == 4
 
 
 def test_empty():
@@ -410,17 +416,17 @@ def test_include(ispec_path, include_dirs, include_path):
     assert commands[0].command == "ls"
     assert commands[0].expected == "file"
     assert commands[0].source_file == ispec_path
-    assert commands[0].source_line_no == 1
+    assert commands[0].source_line_no == 5
     assert commands[1].execution_mode == ExecutionMode.ROOT
     assert commands[1].command == "whoami"
     assert commands[1].expected == "root"
     assert "test.ispec" in str(commands[1].source_file)
-    assert commands[1].source_line_no == 1
+    assert commands[1].source_line_no == 3
     assert commands[2].execution_mode == ExecutionMode.ROOT
     assert commands[2].command == "ls"
     assert commands[2].expected == "file"
     assert commands[2].source_file == ispec_path
-    assert commands[2].source_line_no == 4
+    assert commands[2].source_line_no == 8
 
 
 def test_environment():
@@ -634,4 +640,4 @@ def test_fixture():
     assert specfile.fixture_specfile_pre
     assert len(specfile.fixture_specfile_pre.commands) == 2
     assert specfile.fixture_specfile_post
-    assert len(specfile.fixture_specfile_post.commands) == 2
+    assert len(specfile.fixture_specfile_post.commands) == 3
