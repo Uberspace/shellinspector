@@ -112,12 +112,14 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
 
     si_user_values = {}
     handled_fixtures = set()
+    parse_failed = False
 
     # Parse files
     for spec_file_path in spec_file_paths:
         spec_file = parse_spec_file(spec_file_path)
 
         if spec_file is None or spec_file.errors:
+            parse_failed = True
             continue
 
         if tags and not any(t in spec_file.tags for t in tags):
@@ -128,6 +130,9 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
                 spec_files.append(spec_file.as_example(example))
         else:
             spec_files.append(spec_file)
+
+    if parse_failed:
+        return 1
 
     # run RUN scoped fixtures (pre)
     for spec_file in spec_files:
