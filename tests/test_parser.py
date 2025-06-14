@@ -520,6 +520,7 @@ def test_command_short_literal():
         1,
         "$ echo a\nb",
         False,
+        None,
     )
     assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, LITERAL)"
 
@@ -537,6 +538,7 @@ def test_command_expected_with_args():
         1,
         "$ echo a\nb",
         False,
+        None,
     )
     assert cmd.get_expected_with_vars({"a": "b"}) == "b{1}{unused}{open"
 
@@ -554,6 +556,7 @@ def test_command_short_regex():
         1,
         "$ echo a\nb",
         False,
+        None,
     )
     assert cmd.short == "USER(None@local) `echo a` (expect 2 lines, REGEX)"
 

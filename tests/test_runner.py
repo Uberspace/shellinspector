@@ -251,6 +251,7 @@ def command_local_echo_literal():
         1,
         "$ echo a",
         False,
+        None,
     )
 
 
@@ -268,6 +269,7 @@ def command_local_echo_literal_var():
         1,
         "$ echo $a",
         False,
+        None,
     )
 
 
@@ -285,6 +287,7 @@ def command_local_echo_literal_fail():
         1,
         "$ echo a",
         False,
+        None,
     )
 
 
@@ -302,6 +305,7 @@ def command_remote_echo_literal():
         1,
         "$ echo a",
         False,
+        None,
     )
 
 
@@ -319,6 +323,7 @@ def command_local_echo_regex():
         1,
         "$ echo a",
         False,
+        None,
     )
 
 
@@ -336,6 +341,7 @@ def command_local_echo_regex_var():
         1,
         "$ echo $a foo",
         False,
+        None,
     )
 
 
@@ -353,6 +359,7 @@ def command_local_echo_ignore():
         1,
         "$ echo a",
         False,
+        None,
     )
 
 
@@ -550,6 +557,7 @@ def test_check_result_unknown_assert_mode(make_runner, ssh_config):
         1,
         "$ echo a",
         False,
+        None,
     )
 
     with pytest.raises(Exception, match="Unknown assert_mode: xxx.*"):
@@ -578,6 +586,7 @@ def test_get_session(make_runner, ssh_config, user, host, expected_class):
         1,
         "$ echo a",
         False,
+        None,
     )
 
     session1 = runner._get_session(cmd, 5)
@@ -615,6 +624,7 @@ def test_get_session_unknown_host(make_runner, ssh_config):
         1,
         "$ echo a",
         False,
+        None,
     )
 
     with pytest.raises(Exception, match="Unknown host: xxx.*"):
@@ -662,6 +672,7 @@ def test_logout(make_runner, ssh_config):
             1,
             "$ echo a",
             False,
+            None,
         ),
         Command(
             ExecutionMode.ROOT,
@@ -675,6 +686,7 @@ def test_logout(make_runner, ssh_config):
             1,
             "$ echo a",
             False,
+            None,
         ),
         Command(
             ExecutionMode.ROOT,
@@ -688,6 +700,7 @@ def test_logout(make_runner, ssh_config):
             1,
             "$ echo a",
             False,
+            None,
         ),
     ]
 
@@ -732,6 +745,7 @@ def test_runner_python(mocker, make_runner, ssh_config):
             1,
             "return_true()",
             False,
+            None,
         ),
     ]
 
@@ -780,6 +794,7 @@ def test_runner_python_fail(mocker, make_runner, ssh_config):
             1,
             "return_true()",
             False,
+            None,
         ),
     ]
 
@@ -821,6 +836,7 @@ def test_environment2(make_runner, ssh_config):
             1,
             "$ echo $something",
             False,
+            None,
         ),
     ]
 

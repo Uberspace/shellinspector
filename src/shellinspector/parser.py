@@ -34,6 +34,7 @@ class Command:
     source_line_no: int
     line: str
     has_heredoc: bool
+    specfile: "Specfile"
 
     def get_line_with_variables(self, env):
         line = self.line
@@ -48,10 +49,6 @@ class Command:
         for k, v in env.items():
             expected = expected.replace("{" + str(k) + "}", str(v))
         return expected
-
-    @property
-    def source_line_no_zeroed(self):
-        return f"{self.source_line_no:3}"
 
     @property
     def line_count(self):
@@ -105,9 +102,16 @@ class Specfile:
     applied_example: dict
     tags: list[str]
     settings: Settings
+    is_fixture: bool
 
     def __init__(
-        self, path, commands=None, errors=None, environment=None, examples=None
+        self,
+        path,
+        commands=None,
+        errors=None,
+        environment=None,
+        examples=None,
+        is_fixture=False,
     ):
         self.path = Path(path)
         self.commands = commands or []
@@ -120,6 +124,7 @@ class Specfile:
         self.fixture_specfile_post = None
         self.applied_example = None
         self.settings = Settings()
+        self.is_fixture = is_fixture
 
     def copy(self):
         return Specfile(
@@ -128,6 +133,7 @@ class Specfile:
             [dataclasses.replace(e) for e in self.errors],
             self.environment.copy(),
             [e.copy() for e in self.examples],
+            is_fixture=self.is_fixture,
         )
 
     def as_example(self, example):
@@ -314,6 +320,7 @@ def parse_commands(
                     line_no,
                     line,
                     has_heredoc,
+                    specfile,
                 )
             )
         elif last_command.has_heredoc and not last_command.command.endswith("\nHERE"):
@@ -444,6 +451,7 @@ def parse(
                 Path(f"{specfile.fixture}_pre.ispec"),
                 raise_exception=True,
             )
+            specfile.fixture_specfile_pre.is_fixture = True
             fixture_found = True
         except FileNotFoundError:
             pass
@@ -460,6 +468,7 @@ def parse(
                 Path(f"{specfile.fixture}_post.ispec"),
                 raise_exception=True,
             )
+            specfile.fixture_specfile_post.is_fixture = True
             fixture_found = True
         except FileNotFoundError:
             pass

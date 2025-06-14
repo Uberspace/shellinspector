@@ -45,23 +45,31 @@ class ConsoleReporter:
         elif cmd:
             line = getattr(cmd, "line", None)
 
+        if cmd:
+            if cmd.specfile and cmd.specfile.is_fixture:
+                prefix = f"[F{cmd.source_line_no:2}]"
+            else:
+                prefix = f"[{cmd.source_line_no:3}]"
+        else:
+            prefix = ""
+
         if event == RunnerEvent.COMMAND_STARTING:
             if logging.root.level > logging.DEBUG:
                 end = ""
             else:
                 end = "\n"
             self.print(
-                colored(f"[{cmd.source_line_no_zeroed}] RUN  {line}", "light_grey"),
+                colored(f"{prefix} RUN  {line}", "light_grey"),
                 end=end,
             )
         elif event == RunnerEvent.ERROR:
-            self.print(colored(f"[{cmd.source_line_no_zeroed}] ERR  {line}", "red"))
+            self.print(colored(f"{prefix} ERR  {line}", "red"))
             self.print(colored("  " + kwargs["message"], "red"))
             self.print_indented("  output before giving up:", kwargs["actual"], "red")
         elif event == RunnerEvent.COMMAND_PASSED:
-            self.print(colored(f"[{cmd.source_line_no_zeroed}] PASS {line}", "green"))
+            self.print(colored(f"{prefix} PASS {line}", "green"))
         elif event == RunnerEvent.COMMAND_FAILED:
-            self.print(colored(f"[{cmd.source_line_no_zeroed}] FAIL {line}", "red"))
+            self.print(colored(f"{prefix} FAIL {line}", "red"))
             if "message" in kwargs:
                 self.print(colored(f'  {kwargs["message"]}', "red"))
             if "returncode" in kwargs["reasons"]:
