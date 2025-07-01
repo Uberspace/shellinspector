@@ -369,9 +369,21 @@ $ test -d /etc/nonexistant || true
 
 ## Environment
 
-To set envrionment variables for this test run, add an `envrionment` key to the
-frontmatter. `$VARIABLES` and `${VARIABLES}` are interpreted within the values
-of these entries using the shell environment of the controller.
+Shellinspector works with the environment like any other shell session.
+Variables stay within one session, i.e. `$` and `%` lines do not share the same
+environment. They are cleared after the ispec file ends. Variables from file
+scoped fixtures are not cleared before the actual tests. Variables from global
+fixtures are cleared. The `SI_USER` variable is always passed from fixtures to
+the actual tests to all sessions. The value is taken from the first available
+session that has a value set.
+
+There are multiple ways to set environment variables.
+
+### Frontmatter
+
+Set the desired values in the `environment` key inside the frontmatter.
+`$VARIABLES` and `${VARIABLES}` are interpreted within the values of these
+entries using the shell environment of the controller.
 
 `test.ispec`:
 
@@ -385,6 +397,19 @@ $ echo $DNS_SERVER
 1.1.1.1
 $ echo $OUTSIDE_PAGER
 less
+```
+
+### Shell
+
+Use the `export` command like any shell session to set variables dynamically.
+To clear a variable, use the `unset` command.
+
+```yaml
+$ export DNS_SERVER=1.1.1.1
+$ echo $DNS_SERVER
+1.1.1.1
+$ unset DNS_SERVER
+$ echo $DNS_SERVER
 ```
 
 ## Parametrized tests
