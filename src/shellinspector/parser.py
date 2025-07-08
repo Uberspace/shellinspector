@@ -268,6 +268,9 @@ def parse_commands(
                 specfile.commands.extend(included_specfile.commands)
             continue
 
+        if line.startswith(r"\<"):
+            line = f"<{line[2:]}"
+
         prefix = RE_PREFIX.match(line)
 
         # output before very first command

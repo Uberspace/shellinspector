@@ -77,6 +77,7 @@ def test_parse():
                 "b",
                 "% ls",
                 "file",
+                r"\<h1>",
                 "dir",
                 "otherfile",
                 "%~ ls dir",
@@ -108,7 +109,7 @@ def test_parse():
     assert commands[2].user == "root"
     assert commands[2].command == "ls"
     assert commands[2].assert_mode == AssertMode.LITERAL
-    assert commands[2].expected == "file\ndir\notherfile"
+    assert commands[2].expected == "file\n<h1>\ndir\notherfile"
     assert commands[2].source_file == Path("/dev/null")
     assert commands[2].source_line_no == 6
     assert commands[3].execution_mode == ExecutionMode.ROOT
@@ -116,12 +117,12 @@ def test_parse():
     assert commands[3].command == "ls dir"
     assert commands[3].assert_mode == AssertMode.REGEX
     assert commands[3].source_file == Path("/dev/null")
-    assert commands[3].source_line_no == 10
+    assert commands[3].source_line_no == 11
     assert commands[4].execution_mode == ExecutionMode.PYTHON
     assert commands[4].command == "func()"
     assert commands[4].assert_mode == AssertMode.LITERAL
     assert commands[4].source_file == Path("/dev/null")
-    assert commands[4].source_line_no == 12
+    assert commands[4].source_line_no == 13
 
 
 def test_parse_whitespace_literal():

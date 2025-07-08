@@ -274,6 +274,8 @@ plus the directory of the current spec file, in that order.
 testuser
 ```
 
+To escape an include line use `\<`.
+
 ### Comments
 
 Any lines starting with `#` are ignored:
