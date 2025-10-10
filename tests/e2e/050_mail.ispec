@@ -1,0 +1,6 @@
+# the mail command re-enables echoing, breaking output parsing.
+%_ apk update && apk add s-nail
+%~ (echo 'body' | mail a@b) || true
+sendmail: can't connect to remote
+% echo another command
+another command

@@ -889,8 +889,8 @@ class FakeSession(RemoteShell):
     "prompt_works,actual_output,expected_result,expected_events",
     (
         (
-            [True, True, True],
-            [b"a", b"0", b"a=b"],
+            [True, True, True, True],
+            [b"a", b"", b"0", b"a=b"],
             True,
             [
                 (
@@ -900,8 +900,8 @@ class FakeSession(RemoteShell):
             ],
         ),
         (
-            [False, True],
-            [b"a", b"0"],
+            [False, True, True],
+            [b"a", b"", b"0"],
             False,
             [
                 (
@@ -914,8 +914,8 @@ class FakeSession(RemoteShell):
             ],
         ),
         (
-            [True, False],
-            [b"a", b"0"],
+            [True, True, False],
+            [b"a", b"", b"0"],
             False,
             [
                 (
@@ -954,8 +954,8 @@ def test_run_command(
     "prompt_works,actual_output,expected_result,expected_events",
     (
         (
-            [True, True, True],
-            [b"a", b"0", b"a=b"],
+            [True, True, True, True],
+            [b"a", b"", b"0", b"a=b"],
             True,
             [
                 (RunnerEvent.COMMAND_STARTING, "echo a", {}),
@@ -972,8 +972,8 @@ def test_run_command(
             ],
         ),
         (
-            [True, True, True],
-            [b"a", b"1", b"a=b"],
+            [True, True, True, True],
+            [b"a", b"", b"1", b"a=b"],
             False,
             [
                 (RunnerEvent.COMMAND_STARTING, "echo a", {}),

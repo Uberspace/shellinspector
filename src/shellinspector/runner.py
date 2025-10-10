@@ -419,11 +419,16 @@ class ShellRunner:
             )
             return False
 
+        # sometimes commands (e.g. "mail") re-enable echoing,
+        # disable it again here, just to be sure.
+        session.sendline("_SI_RC=$? ; stty -echo")
+        assert session.prompt()
+
         if cmd.has_heredoc:
             command_output = re.sub(r"^(> )*", "", command_output)
 
         try:
-            rc_output = session.run_command("echo $?")
+            rc_output = session.run_command("echo $_SI_RC")
         except TimeoutException as ex:
             self.report(
                 RunnerEvent.ERROR,
