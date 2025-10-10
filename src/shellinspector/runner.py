@@ -419,6 +419,11 @@ class ShellRunner:
             )
             return False
 
+        # sometimes commands (e.g. "mail") re-enable echoing,
+        # disable to again to be sure.
+        session.sendline("stty -echo")
+        assert session.prompt()
+
         if cmd.has_heredoc:
             command_output = re.sub(r"^(> )*", "", command_output)
 
