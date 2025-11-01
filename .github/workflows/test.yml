@@ -5,6 +5,7 @@ on:
     # don't run tests for release tags
     branches:
       - "**"
+  workflow_call:
 
 jobs:
   lint:
