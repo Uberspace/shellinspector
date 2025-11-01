@@ -274,6 +274,24 @@ def command_local_echo_literal_var():
 
 
 @pytest.fixture
+def command_local_echo_literal_env_var():
+    return Command(
+        ExecutionMode.ROOT,
+        "echo $something",
+        "root",
+        None,
+        "remote",
+        AssertMode.LITERAL,
+        "value__",
+        "/some.ispec",
+        1,
+        "$ echo $something",
+        False,
+        None,
+    )
+
+
+@pytest.fixture
 def command_local_echo_literal_fail():
     return Command(
         ExecutionMode.USER,
@@ -815,7 +833,7 @@ def test_runner_python_fail(mocker, make_runner, ssh_config):
     assert run_in_file.call_count == 1
 
 
-def test_environment2(make_runner, ssh_config):
+def test_environment2(make_runner, ssh_config, command_local_echo_literal_env_var):
     runner, events = make_runner(ssh_config)
     specfile = Specfile("virtual.ispec")
 
@@ -823,22 +841,7 @@ def test_environment2(make_runner, ssh_config):
         "something": "value__",
     }
 
-    specfile.commands = [
-        Command(
-            ExecutionMode.ROOT,
-            "echo $something",
-            "root",
-            None,
-            "remote",
-            AssertMode.LITERAL,
-            "value__",
-            "/some.ispec",
-            1,
-            "$ echo $something",
-            False,
-            None,
-        ),
-    ]
+    specfile.commands = [command_local_echo_literal_env_var]
 
     runner.run(specfile)
 
@@ -1063,3 +1066,67 @@ def test_run_in_file_non_call():
         run_in_file(Path(__file__).parent / "e2e/700_python.ispec.py", None, "1 + 1")
 
     assert "Only function calls are supported" in str(ex)
+
+
+def test_real_success(make_runner, ssh_config, command_local_echo_literal_env_var):
+    runner, events = make_runner(ssh_config)
+
+    specfile = Specfile(
+        "virtual.ispec",
+        environment={"something": "value__"},
+        commands=[command_local_echo_literal_env_var],
+    )
+
+    run_success = runner.run(specfile)
+    assert events[0][0][0] == RunnerEvent.COMMAND_STARTING
+    assert events[1][0][0] == RunnerEvent.COMMAND_PASSED
+    assert events[2][0][0] == RunnerEvent.RUN_SUCCEEDED
+    assert run_success is True, events
+
+
+def test_real_fail_output(make_runner, ssh_config, command_local_echo_literal_env_var):
+    runner, events = make_runner(ssh_config)
+
+    specfile = Specfile(
+        "virtual.ispec",
+        environment={"something": "wrong"},
+        commands=[command_local_echo_literal_env_var],
+    )
+
+    run_success = runner.run(specfile)
+    assert events[0][0][0] == RunnerEvent.COMMAND_STARTING
+    assert events[1][0][0] == RunnerEvent.COMMAND_FAILED
+    assert events[1][1]["reasons"] == {"output"}
+    assert events[2][0][0] == RunnerEvent.RUN_FAILED
+    assert run_success is False, events
+
+
+def test_real_fail_rc(make_runner, ssh_config):
+    runner, events = make_runner(ssh_config)
+
+    specfile = Specfile(
+        "virtual.ispec",
+        commands=[
+            Command(
+                ExecutionMode.ROOT,
+                "false",
+                "root",
+                None,
+                "remote",
+                AssertMode.LITERAL,
+                "",
+                "/some.ispec",
+                1,
+                "$ false",
+                False,
+                None,
+            ),
+        ],
+    )
+
+    run_success = runner.run(specfile)
+    assert events[0][0][0] == RunnerEvent.COMMAND_STARTING
+    assert events[1][0][0] == RunnerEvent.COMMAND_FAILED
+    assert events[1][1]["reasons"] == {"returncode"}
+    assert events[2][0][0] == RunnerEvent.RUN_FAILED
+    assert run_success is False, events
