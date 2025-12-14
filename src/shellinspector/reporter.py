@@ -80,5 +80,9 @@ class ConsoleReporter:
                 self.print_indented("    output:", kwargs["actual"], "white")
             if "output" in kwargs["reasons"]:
                 self.print(colored("  output did not match", "red"))
-                self.print_indented("    expected:", cmd.expected, "light_grey")
+                self.print_indented(
+                    "    expected:",
+                    cmd.get_expected_with_vars(kwargs.get("env", {})),
+                    "light_grey",
+                )
                 self.print_indented("    actual:", kwargs["actual"], "white")
