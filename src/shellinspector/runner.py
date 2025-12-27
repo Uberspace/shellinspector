@@ -236,6 +236,7 @@ class RunnerEvent(enum.Enum):
     COMMAND_COMPLETED = enum.auto()
     COMMAND_PASSED = enum.auto()
     COMMAND_FAILED = enum.auto()
+    RUN_STARTING = enum.auto()
     RUN_SUCCEEDED = enum.auto()
     RUN_FAILED = enum.auto()
     ERROR = enum.auto()
@@ -454,6 +455,8 @@ class ShellRunner:
             used_sessions = outer_used_sessions
         else:
             used_sessions = set()
+
+        self.report(RunnerEvent.RUN_STARTING, None, {})
 
         try:
             if (

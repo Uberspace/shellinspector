@@ -81,7 +81,16 @@ def parse_spec_file(path):
     return specfile
 
 
-def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry, fail_early):
+def run(
+    target_host,
+    spec_file_paths,
+    identity,
+    tags,
+    verbose,
+    skip_retry,
+    fail_early,
+    only_show_failed_runs,
+):
     ssh_config = get_ssh_config(target_host)
     ssh_config["ssh_key"] = identity
 
@@ -96,7 +105,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry, fail_
     LOGGER.debug("SSH config: %s", ssh_config)
 
     runner = ShellRunner(ssh_config, context)
-    runner.add_reporter(ConsoleReporter())
+    runner.add_reporter(ConsoleReporter(only_show_failed_runs=only_show_failed_runs))
     success = True
 
     spec_files = []
@@ -283,6 +292,12 @@ def parse_args(argv=None):
         action="store_true",
         default=False,
         help="if one ispec file fails, fail the whole run immediately",
+    )
+    parser.add_argument(
+        "--only-show-failed-runs",
+        action="store_true",
+        default=False,
+        help="skip output for runs that succeeded",
     )
     parser.add_argument(
         "--version",
