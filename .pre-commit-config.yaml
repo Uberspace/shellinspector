@@ -10,7 +10,7 @@ default_language_version:
   python: python3.14
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       # Generall Stuff
       - id: trailing-whitespace
@@ -27,17 +27,17 @@ repos:
       - id: check-toml
   # Prettier (HTML, JS, CSS, Markdown, YAML…)
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.0-alpha.6
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
   # Python: check project
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.12.1
+    rev: v0.25
     hooks:
       - id: validate-pyproject
   # Python: check syntax
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.258
+    rev: v0.15.4
     hooks:
       - id: ruff
         args:
@@ -45,20 +45,20 @@ repos:
           - "--exit-non-zero-on-fix"
   # Python: lint with black
   - repo: https://github.com/psf/black
-    rev: 23.1.0
+    rev: 26.1.0
     hooks:
       - id: black
   # Python: audit requirements
   # NOTE: This intentionally ignores `requirements.dev.txt`. If you want to
   # check those too, you can use `files: requirements` below (or similar).
   - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-    rev: v1.3.1
+    rev: v1.4.2
     hooks:
       - id: python-safety-dependencies-check
         files: requirements\.txt
   # Shell
   - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.9.0.2
+    rev: v0.11.0.1
     hooks:
       - id: shellcheck
   - repo: local
