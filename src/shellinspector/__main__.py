@@ -16,6 +16,9 @@ from shellinspector.runner import ShellRunner
 
 LOGGER = get_logger(Path(__file__).name)
 
+RC_PARSE_FAILED = 6
+RC_TEST_FAILED = 7
+
 
 def get_vagrant_sshport():
     inventory_file = Path(
@@ -132,7 +135,7 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry, fail_
             spec_files.append(spec_file)
 
     if parse_failed:
-        return 1
+        return RC_PARSE_FAILED
 
     # run RUN scoped fixtures (pre)
     for spec_file in spec_files:
@@ -239,11 +242,13 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry, fail_
         print(" ")
         print("Wrote .si-retry file, the next run will only run these spec files.")
 
-    return 0 if success else 1
+    return 0 if success else RC_TEST_FAILED
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        epilog=f"Returns 0, if all tests passed, {RC_PARSE_FAILED}, if parsing failed, {RC_TEST_FAILED} if at least one test failed",
+    )
 
     parser.add_argument(
         "--target-host",
