@@ -78,7 +78,7 @@ def parse_spec_file(path):
     return specfile
 
 
-def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
+def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry, fail_early):
     ssh_config = get_ssh_config(target_host)
     ssh_config["ssh_key"] = identity
 
@@ -187,9 +187,19 @@ def run(target_host, spec_file_paths, identity, tags, verbose, skip_retry):
             spec_file.environment["SI_USER"] = si_user
 
         file_success = runner.run(spec_file)
+        success = success & file_success
+
         if not file_success:
             failed_spec_files.append(spec_file)
-        success = success & file_success
+
+            if fail_early:
+                print(" ")
+                print(
+                    colored(
+                        "Failing early, some spec files may have been skipped.", "red"
+                    )
+                )
+                break
 
     # run RUN scoped fixtures (post)
     for spec_file in spec_files:
@@ -262,6 +272,12 @@ def parse_args(argv=None):
         action="store_true",
         default=False,
         help="do not write or respect .si-retry files, i.e. always run all files provided",
+    )
+    parser.add_argument(
+        "--fail-early",
+        action="store_true",
+        default=False,
+        help="if one ispec file fails, fail the whole run immediately",
     )
     parser.add_argument(
         "--version",
