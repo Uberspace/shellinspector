@@ -661,6 +661,7 @@ def test_timeout_setting(
 
     for event in events:
         assert event[0][0] in (
+            RunnerEvent.RUN_STARTING,
             RunnerEvent.COMMAND_STARTING,
             RunnerEvent.COMMAND_PASSED,
             RunnerEvent.RUN_SUCCEEDED,
@@ -726,6 +727,7 @@ def test_logout(make_runner, ssh_config):
 
     for event in events:
         assert event[0][0] in (
+            RunnerEvent.RUN_STARTING,
             RunnerEvent.COMMAND_STARTING,
             RunnerEvent.COMMAND_PASSED,
             RunnerEvent.RUN_SUCCEEDED,
@@ -769,10 +771,11 @@ def test_runner_python(mocker, make_runner, ssh_config):
 
     runner.run(specfile)
 
-    assert len(events) == 3
+    assert len(events) == 4
 
     for event in events:
         assert event[0][0] in (
+            RunnerEvent.RUN_STARTING,
             RunnerEvent.COMMAND_STARTING,
             RunnerEvent.COMMAND_PASSED,
             RunnerEvent.RUN_SUCCEEDED,
@@ -818,10 +821,11 @@ def test_runner_python_fail(mocker, make_runner, ssh_config):
 
     runner.run(specfile)
 
-    assert len(events) == 3
+    assert len(events) == 4
 
     for event in events:
         assert event[0][0] in (
+            RunnerEvent.RUN_STARTING,
             RunnerEvent.COMMAND_STARTING,
             RunnerEvent.COMMAND_FAILED,
             RunnerEvent.RUN_FAILED,
@@ -847,6 +851,7 @@ def test_environment2(make_runner, ssh_config, command_local_echo_literal_env_va
 
     for event in events:
         assert event[0][0] in (
+            RunnerEvent.RUN_STARTING,
             RunnerEvent.COMMAND_STARTING,
             RunnerEvent.COMMAND_PASSED,
             RunnerEvent.RUN_SUCCEEDED,
@@ -958,6 +963,7 @@ def test_run_command(
             [b"a", b"", b"0", b"a=b"],
             True,
             [
+                (RunnerEvent.RUN_STARTING, None, {}),
                 (RunnerEvent.COMMAND_STARTING, "echo a", {}),
                 (
                     RunnerEvent.COMMAND_PASSED,
@@ -976,6 +982,7 @@ def test_run_command(
             [b"a", b"", b"1", b"a=b"],
             False,
             [
+                (RunnerEvent.RUN_STARTING, None, {}),
                 (RunnerEvent.COMMAND_STARTING, "echo a", {}),
                 (
                     RunnerEvent.COMMAND_FAILED,
@@ -1078,9 +1085,10 @@ def test_real_success(make_runner, ssh_config, command_local_echo_literal_env_va
     )
 
     run_success = runner.run(specfile)
-    assert events[0][0][0] == RunnerEvent.COMMAND_STARTING
-    assert events[1][0][0] == RunnerEvent.COMMAND_PASSED
-    assert events[2][0][0] == RunnerEvent.RUN_SUCCEEDED
+    assert events[0][0][0] == RunnerEvent.RUN_STARTING
+    assert events[1][0][0] == RunnerEvent.COMMAND_STARTING
+    assert events[2][0][0] == RunnerEvent.COMMAND_PASSED
+    assert events[3][0][0] == RunnerEvent.RUN_SUCCEEDED
     assert run_success is True, events
 
 
@@ -1094,10 +1102,11 @@ def test_real_fail_output(make_runner, ssh_config, command_local_echo_literal_en
     )
 
     run_success = runner.run(specfile)
-    assert events[0][0][0] == RunnerEvent.COMMAND_STARTING
-    assert events[1][0][0] == RunnerEvent.COMMAND_FAILED
-    assert events[1][1]["reasons"] == {"output"}
-    assert events[2][0][0] == RunnerEvent.RUN_FAILED
+    assert events[0][0][0] == RunnerEvent.RUN_STARTING
+    assert events[1][0][0] == RunnerEvent.COMMAND_STARTING
+    assert events[2][0][0] == RunnerEvent.COMMAND_FAILED
+    assert events[2][1]["reasons"] == {"output"}
+    assert events[3][0][0] == RunnerEvent.RUN_FAILED
     assert run_success is False, events
 
 
@@ -1125,8 +1134,9 @@ def test_real_fail_rc(make_runner, ssh_config):
     )
 
     run_success = runner.run(specfile)
-    assert events[0][0][0] == RunnerEvent.COMMAND_STARTING
-    assert events[1][0][0] == RunnerEvent.COMMAND_FAILED
-    assert events[1][1]["reasons"] == {"returncode"}
-    assert events[2][0][0] == RunnerEvent.RUN_FAILED
+    assert events[0][0][0] == RunnerEvent.RUN_STARTING
+    assert events[1][0][0] == RunnerEvent.COMMAND_STARTING
+    assert events[2][0][0] == RunnerEvent.COMMAND_FAILED
+    assert events[2][1]["reasons"] == {"returncode"}
+    assert events[3][0][0] == RunnerEvent.RUN_FAILED
     assert run_success is False, events
