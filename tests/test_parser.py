@@ -234,6 +234,7 @@ def test_parse_here_doc():
             [
                 "% cat <<HERE",
                 "fooHERE",
+                "# not a comment",
                 "bar",
                 "HERE",
                 "foo",
@@ -246,7 +247,7 @@ def test_parse_here_doc():
     assert len(errors) == 0
     assert len(commands) == 1
 
-    assert commands[0].command == "cat <<HERE\nfooHERE\nbar\nHERE"
+    assert commands[0].command == "cat <<HERE\nfooHERE\n# not a comment\nbar\nHERE"
     assert commands[0].expected == "foo\nbar"
 
 

@@ -245,10 +245,6 @@ def parse_commands(
     specfile: Specfile, commands: str, command_offset_lines: int
 ) -> None:
     for line_no, line in enumerate(commands.splitlines(), command_offset_lines + 1):
-        # comment
-        if line.startswith("#"):
-            continue
-
         # empty line(s) before first command
         if not line and not specfile.commands:
             continue
@@ -257,6 +253,10 @@ def parse_commands(
             last_command = specfile.commands[-1]
         except IndexError:
             last_command = None
+
+        # comment
+        if line.startswith("#") and (not last_command or not last_command.has_heredoc):
+            continue
 
         # include
         if line.startswith("<") and not (last_command and last_command.has_heredoc):
