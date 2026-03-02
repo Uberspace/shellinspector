@@ -146,6 +146,27 @@ def test_parse_whitespace_literal():
     assert commands[0].expected == "a\nb"
 
 
+def test_parse_multiline():
+    specfile = parse(
+        "/dev/null",
+        make_stream(
+            [
+                "% curl https://foo/bar/ \\",
+                "  --fail-with-body \\",
+                "  || true",
+                "expected",
+            ]
+        ),
+    )
+    commands, errors = (specfile.commands, specfile.errors)
+
+    assert len(errors) == 0
+    assert len(commands) == 1
+
+    assert commands[0].command == "curl https://foo/bar/ --fail-with-body || true"
+    assert commands[0].expected == "expected"
+
+
 def test_parse_si_user_session():
     specfile = parse(
         "/dev/null",

@@ -34,6 +34,7 @@ class Command:
     source_line_no: int
     line: str
     has_heredoc: bool
+    has_multiline_cmd: bool
     specfile: "Specfile"
 
     def get_line_with_variables(self, env):
@@ -310,6 +311,12 @@ def parse_commands(
             else:
                 has_heredoc = False
 
+            if command.endswith("\\"):
+                has_multiline_cmd = True
+                command = command.rstrip("\n\\").lstrip()
+            else:
+                has_multiline_cmd = False
+
             specfile.commands.append(
                 Command(
                     execution_mode,
@@ -323,12 +330,18 @@ def parse_commands(
                     line_no,
                     line,
                     has_heredoc,
+                    has_multiline_cmd,
                     specfile,
                 )
             )
         elif last_command.has_heredoc and not last_command.command.endswith("\nHERE"):
             # add additional lines from HERE doc
             last_command.command += "\n" + line
+        elif last_command.has_multiline_cmd:
+            if not line.endswith("\\"):
+                last_command.has_multiline_cmd = False
+            # add additional lines from multiline command
+            last_command.command += line.rstrip("\n\\").lstrip()
         else:
             # add output line
             last_command.expected += line + "\n"
