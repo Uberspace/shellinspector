@@ -355,7 +355,7 @@ def parse_commands(
 
 
 def parse_global_config(
-    ispec_path: typing.Union[str, Path]
+    ispec_path: typing.Union[str, Path],
 ) -> tuple[dict, typing.Optional[Path]]:
     search_path = Path(ispec_path)
 

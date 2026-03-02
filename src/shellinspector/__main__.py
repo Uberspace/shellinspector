@@ -170,9 +170,9 @@ def run(
 
         for session in sessions:
             try:
-                si_user_values[
-                    spec_file.fixture_specfile_pre.path
-                ] = session.get_environment()["SI_USER"]
+                si_user_values[spec_file.fixture_specfile_pre.path] = (
+                    session.get_environment()["SI_USER"]
+                )
                 break
             except Exception:
                 pass
