@@ -24,7 +24,7 @@ to install hatch using
 ```shell
 $ hatch run default:cov
 ========== test session starts ==========
-platform linux -- Python 3.10.10, pytest-7.2.2, pluggy-1.0.0
+platform linux -- Python 3, pytest-7.2.2, pluggy-1.0.0
 rootdir: /home/luto/uberspace/shellinspector
 plugins: cov-4.0.0
 collected 17 items

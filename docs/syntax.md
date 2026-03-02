@@ -472,7 +472,7 @@ session is used for `ctx.env`.
 # Create a user and check the default python version
 < create_user.ispec
 $~ python --version
-^Python 3.10
+^Python 3.14
 $~ pip --version
-^pip.*python 3.10
+^pip.*python 3.14
 ```
