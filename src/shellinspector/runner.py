@@ -313,6 +313,7 @@ class ShellRunner:
                 0,
                 "",
                 False,
+                False,
                 None,
             ),
             timeout_seconds,

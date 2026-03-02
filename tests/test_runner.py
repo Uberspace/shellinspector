@@ -251,6 +251,7 @@ def command_local_echo_literal():
         1,
         "$ echo a",
         False,
+        False,
         None,
     )
 
@@ -268,6 +269,7 @@ def command_local_echo_literal_var():
         "/some.ispec",
         1,
         "$ echo $a",
+        False,
         False,
         None,
     )
@@ -287,6 +289,7 @@ def command_local_echo_literal_env_var():
         1,
         "$ echo $something",
         False,
+        False,
         None,
     )
 
@@ -304,6 +307,7 @@ def command_local_echo_literal_fail():
         "/some.ispec",
         1,
         "$ echo a",
+        False,
         False,
         None,
     )
@@ -323,6 +327,7 @@ def command_remote_echo_literal():
         1,
         "$ echo a",
         False,
+        False,
         None,
     )
 
@@ -340,6 +345,7 @@ def command_local_echo_regex():
         "/some.ispec",
         1,
         "$ echo a",
+        False,
         False,
         None,
     )
@@ -359,6 +365,7 @@ def command_local_echo_regex_var():
         1,
         "$ echo $a foo",
         False,
+        False,
         None,
     )
 
@@ -376,6 +383,7 @@ def command_local_echo_ignore():
         "/some.ispec",
         1,
         "$ echo a",
+        False,
         False,
         None,
     )
@@ -575,6 +583,7 @@ def test_check_result_unknown_assert_mode(make_runner, ssh_config):
         1,
         "$ echo a",
         False,
+        False,
         None,
     )
 
@@ -603,6 +612,7 @@ def test_get_session(make_runner, ssh_config, user, host, expected_class):
         "/some.ispec",
         1,
         "$ echo a",
+        False,
         False,
         None,
     )
@@ -641,6 +651,7 @@ def test_get_session_unknown_host(make_runner, ssh_config):
         "/some.ispec",
         1,
         "$ echo a",
+        False,
         False,
         None,
     )
@@ -691,6 +702,7 @@ def test_logout(make_runner, ssh_config):
             1,
             "$ echo a",
             False,
+            False,
             None,
         ),
         Command(
@@ -705,6 +717,7 @@ def test_logout(make_runner, ssh_config):
             1,
             "$ echo a",
             False,
+            False,
             None,
         ),
         Command(
@@ -718,6 +731,7 @@ def test_logout(make_runner, ssh_config):
             "/some.ispec",
             1,
             "$ echo a",
+            False,
             False,
             None,
         ),
@@ -764,6 +778,7 @@ def test_runner_python(mocker, make_runner, ssh_config):
             "/virtual.ispec",
             1,
             "return_true()",
+            False,
             False,
             None,
         ),
@@ -814,6 +829,7 @@ def test_runner_python_fail(mocker, make_runner, ssh_config):
             "/virtual.ispec",
             1,
             "return_true()",
+            False,
             False,
             None,
         ),
@@ -1127,6 +1143,7 @@ def test_real_fail_rc(make_runner, ssh_config):
                 "/some.ispec",
                 1,
                 "$ false",
+                False,
                 False,
                 None,
             ),
