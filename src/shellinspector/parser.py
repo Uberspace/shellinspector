@@ -244,6 +244,8 @@ def include_file(
 def parse_commands(
     specfile: Specfile, commands: str, command_offset_lines: int
 ) -> None:
+    in_heredoc = False
+
     for line_no, line in enumerate(commands.splitlines(), command_offset_lines + 1):
         # empty line(s) before first command
         if not line and not specfile.commands:
@@ -255,11 +257,11 @@ def parse_commands(
             last_command = None
 
         # comment
-        if line.startswith("#") and (not last_command or not last_command.has_heredoc):
+        if line.startswith("#") and not in_heredoc:
             continue
 
         # include
-        if line.startswith("<") and not (last_command and last_command.has_heredoc):
+        if line.startswith("<") and not in_heredoc:
             include_path = Path(line[1:].strip())
             included_specfile = include_file(
                 specfile, line_no, line, specfile.settings.include_dirs, include_path
@@ -307,9 +309,9 @@ def parse_commands(
                 user = "root"
 
             if command.endswith("<<HERE"):
-                has_heredoc = True
+                in_heredoc = True
             else:
-                has_heredoc = False
+                in_heredoc = False
 
             if command.endswith("\\"):
                 has_multiline_cmd = True
@@ -329,13 +331,15 @@ def parse_commands(
                     specfile.path,
                     line_no,
                     line,
-                    has_heredoc,
+                    in_heredoc,
                     has_multiline_cmd,
                     specfile,
                 )
             )
-        elif last_command.has_heredoc and not last_command.command.endswith("\nHERE"):
+        elif in_heredoc:
             # add additional lines from HERE doc
+            if line == "HERE":
+                in_heredoc = False
             last_command.command += "\n" + line
         elif last_command.has_multiline_cmd:
             if not line.endswith("\\"):

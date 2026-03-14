@@ -237,6 +237,7 @@ def test_parse_here_doc():
                 "# not a comment",
                 "bar",
                 "HERE",
+                "# a comment",
                 "foo",
                 "bar",
             ]
