@@ -1,19 +1,16 @@
+import difflib
 import logging
 import os
 import sys
 from pathlib import Path
-import rich
 
+from rich.console import Console
+from rich.padding import Padding
+from rich.syntax import Syntax
 from termcolor import colored
 
 from shellinspector.logging import get_logger
 from shellinspector.runner import RunnerEvent
-
-import difflib
-
-from rich.console import Console
-from rich.syntax import Syntax
-from rich.padding import Padding
 
 LOGGER = get_logger(Path(__file__).name)
 
