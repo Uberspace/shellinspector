@@ -23,6 +23,7 @@ dependencies = [
   "pexpect==4.*",
   "termcolor==2.*",
   "PyYAML>=6",
+  "rich>=14",
 ]
 dynamic = ["version"]
 
