@@ -497,7 +497,7 @@ class ShellRunner:
                             RunnerEvent.COMMAND_FAILED,
                             cmd,
                             {
-                                "message": "Could not open session: no user was specified and $SI_USER is unset",
+                                "message": f"Could not open session: no user was specified and $SI_USER is unset. Found env: {root_env}",
                                 "reasons": [],
                             },
                         )
