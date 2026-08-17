@@ -6,14 +6,8 @@ import enum
 import logging
 import os
 import re
-import shlex
-import sys
 from contextlib import contextmanager
 from pathlib import Path
-
-from pexpect import pxssh
-from pexpect import spawn
-from pexpect.pxssh import ExceptionPxssh
 
 from shellinspector.logging import get_logger
 from shellinspector.parser import AssertMode
@@ -21,14 +15,10 @@ from shellinspector.parser import Command
 from shellinspector.parser import ExecutionMode
 from shellinspector.parser import FixtureScope
 from shellinspector.parser import Specfile
+from shellinspector.tmux_shell import TimeoutException
+from shellinspector.tmux_shell import TmuxShell
 
 LOGGER = get_logger(Path(__file__).name)
-
-
-class TimeoutException(Exception):
-    def __init__(self, output_so_far: str):
-        self.output_so_far = output_so_far
-        super().__init__()
 
 
 @dataclasses.dataclass
@@ -83,123 +73,6 @@ def run_in_file(filename: Path, si_context: dict, code: str):
     return globalz["_return_value"]
 
 
-class RemoteShell(pxssh.pxssh):
-    def __init__(self, *args, **kwargs):
-        # ignoring the echoed commands doesn't seem to work for local commands
-        # just disabling echo is easier than debugging this.
-        kwargs["echo"] = False
-        super().__init__(*args, **kwargs)
-
-        self.push_depth = 0
-
-    def run_command(self, line):
-        self.sendline(line)
-        found_prompt = self.prompt()
-        actual_output = self.before.decode()
-        actual_output = actual_output.replace("\r\n", "\n")
-
-        if found_prompt:
-            return actual_output
-        else:
-            self.close()
-            raise TimeoutException(actual_output)
-
-    def set_environment(self, context):
-        for k, v in context.items():
-            self.sendline(f"export {k}={shlex.quote(str(v))}")
-            assert self.prompt()
-
-    def get_environment(self):
-        output = self.run_command("export")
-
-        env = {}
-
-        for line in output.splitlines():
-            line = line.removeprefix("export ")
-            line = line.removeprefix("declare -x ")
-            k, _, v = line.partition("=")
-
-            if not v:
-                continue
-
-            try:
-                env[k] = " ".join(shlex.split(v))
-            except ValueError:
-                LOGGER.debug(
-                    "Could not get value of env variable %s, continuing anyway. Original value: %s",
-                    k,
-                    v,
-                )
-
-        return env
-
-    def push_state(self):
-        self.push_depth += 1
-
-        # launch a child shell so we can easily reset the environment variables
-        self.sendline("bash")
-
-        # new shell means new prompt, so reconfigure the prompt recognition
-        self.set_unique_prompt()
-        # trigger a fresh prompt so .prompt() is faster
-        self.sendline("")
-        assert self.prompt()
-
-        self.sendline(f"export SHELLINSPECTOR_PROMPT_STATE={self.push_depth}")
-        assert self.prompt()
-
-    def pop_state(self):
-        if self.closed:
-            return
-
-        self.sendline("echo $SHELLINSPECTOR_PROMPT_STATE")
-        assert self.prompt()
-        out = self.before.decode().strip()
-
-        if not out or int(out) != self.push_depth:
-            raise Exception(
-                "Test shell was exited, check if your test script contains an exit command"
-            )
-
-        self.sendline("exit")
-        assert self.prompt()
-
-        self.push_depth -= 1
-
-
-class LocalShell(RemoteShell):
-    """Like RemoteShell/pxssh, but uses a local shell instead of a remote ssh one."""
-
-    def login(
-        self,
-        sync_original_prompt=True,
-        auto_prompt_reset=True,
-        sync_multiplier=1,
-        *args,
-        **kwargs,
-    ):
-        spawn._spawn(self, "/bin/bash")
-
-        if sync_original_prompt:
-            if not self.sync_original_prompt(sync_multiplier):
-                self.close()
-                raise ExceptionPxssh("could not synchronize with original prompt")
-
-        if auto_prompt_reset:
-            if not self.set_unique_prompt():
-                self.close()
-                raise ExceptionPxssh(
-                    "could not set shell prompt "
-                    "(received: %r, expected: %r)."
-                    % (
-                        self.before,
-                        self.PROMPT,
-                    )
-                )
-
-        return True
-
-
 @contextmanager
 def disable_color():
     if "TERM" in os.environ:
@@ -215,20 +88,6 @@ def disable_color():
         os.environ["TERM"] = old_term
     else:
         del os.environ["TERM"]
-
-
-def get_ssh_session(ssh_config, timeout_seconds):
-    with disable_color():
-        shell = RemoteShell(timeout=timeout_seconds)
-        shell.login(**ssh_config)
-        return shell
-
-
-def get_localshell(timeout_seconds):
-    with disable_color():
-        shell = LocalShell(timeout=timeout_seconds)
-        shell.login()
-        return shell
 
 
 class RunnerEvent(enum.Enum):
@@ -280,23 +139,26 @@ class ShellRunner:
 
     def _make_session(self, key, cmd, timeout_seconds):
         LOGGER.debug("creating session: %s", key)
-        if cmd.host == "local":
-            LOGGER.debug("new local shell session")
-            session = self.sessions[key] = get_localshell(timeout_seconds)
-        else:
-            ssh_config = {
-                **self.ssh_config,
-                "username": cmd.user,
-                "server": self.ssh_config["server"],
-                "port": self.ssh_config["port"],
-            }
-            LOGGER.debug("connecting via SSH: %s", ssh_config)
-            session = get_ssh_session(ssh_config, timeout_seconds)
 
-        if logging.root.level == logging.DEBUG:
-            # use .buffer here, because pexpect wants to write bytes, not strs
-            session.logfile = sys.stdout.buffer
+        verbose = logging.root.level == logging.DEBUG
 
+        with disable_color():
+            if cmd.host == "local":
+                LOGGER.debug("new local tmux shell session")
+                session = TmuxShell(timeout=timeout_seconds, verbose=verbose)
+            else:
+                LOGGER.debug("connecting via SSH (tmux): %s", self.ssh_config)
+                session = TmuxShell(
+                    timeout=timeout_seconds,
+                    verbose=verbose,
+                    server=self.ssh_config["server"],
+                    port=self.ssh_config["port"],
+                    username=cmd.user,
+                    ssh_key=self.ssh_config.get("ssh_key"),
+                )
+            session.login()
+
+        self.sessions[key] = session
         return session
 
     def _get_root_session(self, timeout_seconds):
@@ -321,23 +183,16 @@ class ShellRunner:
 
     def _get_session(self, cmd, timeout_seconds):
         """
-        Create or reuse a shell session used to run the given command.
+        Create or reuse a TmuxShell session used to run the given command.
 
             session = _get_session(cmd)
-            session.sendline("echo a")
-            session.prompt()
-            assert session.before.decode() == "a"
+            output = session.run_command("echo a")
+            assert output == "a"
 
         If cmd.host is "local", this opens a shell session as the current user
         on the current machine. Username and port are ignored. If server is
         remote, this uses the ssh(1) command to establish a connection to the
         server given in __init__.
-
-        It also makes sure that the environment is as clean as possible, so you
-        can use environment variables freely.
-
-        The yielded session object is a `pexpect.pxssh.pxssh`:
-        https://pexpect.readthedocs.io/en/stable/api/pxssh.html#pxssh-class
         """
 
         key = self._get_session_key(cmd)
@@ -421,33 +276,10 @@ class ShellRunner:
             )
             return False
 
-        # sometimes commands (e.g. "mail") re-enable echoing,
-        # disable it again here, just to be sure.
-        session.sendline("_SI_RC=$? ; stty -echo")
-        assert session.prompt()
-
-        if cmd.has_heredoc:
-            command_output = re.sub(r"^(> )*", "", command_output)
-
-        try:
-            rc_output = session.run_command("echo $_SI_RC")
-        except TimeoutException as ex:
-            self.report(
-                RunnerEvent.ERROR,
-                cmd,
-                {
-                    "message": "timeout, could not find prompt for return code",
-                    "actual": ex.output_so_far,
-                },
-            )
-            return False
-
-        rc_output = int(rc_output)
-
         return self._check_result(
             cmd,
             command_output,
-            int(rc_output),
+            session.get_returncode(),
             session.get_environment(),
         )
 

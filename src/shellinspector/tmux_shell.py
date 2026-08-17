@@ -87,7 +87,7 @@ class TmuxShell:
         )
 
         if self.verbose:
-            print(f"+ {shlex.join(args)}")
+            print(f"+ {shlex.join(full_cmd)}")
             print(result.stdout.decode(errors="replace"))
 
         return result
@@ -128,6 +128,18 @@ class TmuxShell:
 
         self._unread_lines = 0
 
+        # Remote sessions are launched as a login shell (-l), so PATH and
+        # other env setup from .profile/.bash_profile match what an
+        # interactive `ssh host` session would get (e.g. ~/.local/bin on
+        # PATH) -- pxssh's ssh-based login() gets this for free since sshd
+        # itself starts a login shell; TmuxShell has to ask for it
+        # explicitly since it launches bash directly as a tmux command.
+        # Local sessions intentionally skip profile/rc files to keep them
+        # predictable and match LocalShell's plain `/bin/bash` behavior.
+        bash_args = (
+            ["bash", "-l"] if self._is_remote else ["bash", "--noprofile", "--norc"]
+        )
+
         self._tmux(
             "new-session",
             "-d",
@@ -137,9 +149,7 @@ class TmuxShell:
             str(TMUX_WIDTH),
             "-y",
             str(TMUX_HEIGHT),
-            "bash",
-            "--noprofile",
-            "--norc",
+            *bash_args,
             timeout=self.timeout,
         )
         self._tmux(
@@ -203,13 +213,15 @@ class TmuxShell:
         # everything around it stays `; `-joined (and thus still only
         # echoed once, right before the start marker) since neither of
         # those fixed segments can themselves contain a heredoc.
-        rc_and_end = (
-            f"rc=$?; printf '\\n{COMMAND_END}:{command_id}:%s\\n' \"$rc\""
-        )
+        rc_and_end = f"rc=$?; printf '\\n{COMMAND_END}:{command_id}:%s\\n' \"$rc\""
         if "\n" in line:
-            payload = f"printf '\\n{COMMAND_START}:{command_id}\\n'\n{line}\n{rc_and_end}"
+            payload = (
+                f"printf '\\n{COMMAND_START}:{command_id}\\n'\n{line}\n{rc_and_end}"
+            )
         else:
-            payload = f"printf '\\n{COMMAND_START}:{command_id}\\n'; {line}; {rc_and_end}"
+            payload = (
+                f"printf '\\n{COMMAND_START}:{command_id}\\n'; {line}; {rc_and_end}"
+            )
 
         self._tmux(
             "send-keys",
@@ -236,7 +248,9 @@ class TmuxShell:
         # right before the end marker's real output whenever line contains
         # a heredoc (see above: that's the only case rc_and_end ends up on
         # its own echoed segment instead of being consumed silently).
-        re_rc_and_end_echo = re.compile(rf"^.*{re.escape(rc_and_end)}$\n?", re.MULTILINE)
+        re_rc_and_end_echo = re.compile(
+            rf"^.*{re.escape(rc_and_end)}$\n?", re.MULTILINE
+        )
 
         deadline = time.monotonic() + self.timeout
 
@@ -312,3 +326,16 @@ class TmuxShell:
     def set_environment(self, context):
         for k, v in context.items():
             self.run_command(f"export {k}={shlex.quote(str(v))}")
+
+    def push_state(self):
+        # RemoteShell isolates env vars per spec-file run via a nested bash
+        # (see runner.py), which doesn't translate to run_command()'s
+        # marker-based, single-line-joined synchronization -- launching a
+        # nested shell blocks the marker roundtrip until that shell exits.
+        # Skipped for this spike: not needed for perf comparison, and
+        # tmux's persistent session (plus ControlMaster reuse once wired)
+        # may remove the need for this kind of isolation entirely.
+        pass
+
+    def pop_state(self):
+        pass

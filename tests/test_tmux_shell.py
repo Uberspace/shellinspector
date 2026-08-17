@@ -201,17 +201,15 @@ def test_nested_command_substitution(shell):
     # roles/generator-caddy/tests/create_delete_user.ispec uses
     # $(printf "%06d" $((16#$(openssl rand -hex 4) % 1000000))) - $() nested
     # two levels deep with arithmetic expansion mixed in.
-    output = shell.run_command('echo $(echo $(echo nested))')
+    output = shell.run_command("echo $(echo $(echo nested))")
     assert output == "nested"
 
 
 def test_single_and_double_quote_mix(shell):
     # roles/lang-php/tests/config_web.ispec mixes single and double quotes
     # with embedded $variables and escaped double-quotes in one line.
-    output = shell.run_command(
-        """echo '<?php $e = "value"; echo "$e\\n";'"""
-    )
-    assert output == '''<?php $e = "value"; echo "$e\\n";'''
+    output = shell.run_command("""echo '<?php $e = "value"; echo "$e\\n";'""")
+    assert output == """<?php $e = "value"; echo "$e\\n";"""
 
 
 def test_pipe_and_stderr_redirect(shell):
@@ -247,6 +245,22 @@ def test_semicolon_then_echo_rc(shell):
     output = shell.run_command("false; echo $?")
     assert output == "1"
     assert shell.get_returncode() == 0
+
+
+def test_push_pop_state_are_noops(shell):
+    # push_state()/pop_state() are stubbed as no-ops for now (see
+    # tmux_shell.py) -- just check they exist and don't raise, since
+    # ShellRunner.run() calls them unconditionally around every spec-file
+    # run.
+    shell.push_state()
+    shell.pop_state()
+
+
+def test_pop_state_noop_after_close():
+    shell = TmuxShell(timeout=5)
+    shell.login()
+    shell.close()
+    shell.pop_state()
 
 
 def test_exported_function_persists(shell):

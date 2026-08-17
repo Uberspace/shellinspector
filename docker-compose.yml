@@ -5,7 +5,7 @@ services:
       sh -c "
         mkdir -p /root/.ssh &&
         echo ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZUxcZnBS+VeOhiYvjp46XSrDdwjdQzrXSCE+krNDQn > /root/.ssh/authorized_keys &&
-        apk add --no-cache bash openssh &&
+        apk add --no-cache bash openssh tmux &&
         ssh-keygen -A &&
         exec /usr/sbin/sshd -D -e
       "

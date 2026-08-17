@@ -8,15 +8,12 @@ from shellinspector.parser import AssertMode
 from shellinspector.parser import Command
 from shellinspector.parser import ExecutionMode
 from shellinspector.parser import Specfile
-from shellinspector.runner import LocalShell
-from shellinspector.runner import RemoteShell
 from shellinspector.runner import RunnerEvent
 from shellinspector.runner import ShellinspectorPyContext
 from shellinspector.runner import ShellRunner
 from shellinspector.runner import disable_color
-from shellinspector.runner import get_localshell
-from shellinspector.runner import get_ssh_session
 from shellinspector.runner import run_in_file
+from shellinspector.tmux_shell import TmuxShell
 
 
 @pytest.fixture
@@ -594,8 +591,8 @@ def test_check_result_unknown_assert_mode(make_runner, ssh_config):
 @pytest.mark.parametrize(
     "user,host,expected_class",
     (
-        (None, "local", LocalShell),
-        ("root", "remote", RemoteShell),
+        (None, "local", TmuxShell),
+        ("root", "remote", TmuxShell),
     ),
 )
 def test_get_session(make_runner, ssh_config, user, host, expected_class):
@@ -874,7 +871,7 @@ def test_environment2(make_runner, ssh_config, command_local_echo_literal_env_va
         ), event
 
 
-class FakeSession(RemoteShell):
+class FakeSession:
     def __init__(self, prompt_works, before):
         self._prompt_works = prompt_works
         self._before = before
