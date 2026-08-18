@@ -224,8 +224,13 @@ class TmuxShell:
                 f"printf '\\n{COMMAND_START}:{command_id}\\n'\n{line}\n{rc_and_end}"
             )
         else:
+            # an empty line would leave two bare `;` back to back (";;"),
+            # which is a syntax error outside a case statement -- ":" is
+            # bash's no-op builtin, so it keeps the payload valid without
+            # changing the returncode/output of a genuinely empty command.
+            command = line or ":"
             payload = (
-                f"printf '\\n{COMMAND_START}:{command_id}\\n'; {line}; {rc_and_end}"
+                f"printf '\\n{COMMAND_START}:{command_id}\\n'; {command}; {rc_and_end}"
             )
 
         self._tmux(

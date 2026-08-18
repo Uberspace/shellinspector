@@ -203,6 +203,15 @@ def test_multiline_output(shell):
     assert output == "l1\nl2\nl3"
 
 
+def test_empty_command(shell):
+    output = shell.run_command("")
+    assert output == ""
+    assert shell.get_returncode() == 0
+
+    output = shell.run_command("echo after_empty")
+    assert output == "after_empty"
+
+
 def test_command_id_uniqueness_does_not_confuse_markers(shell):
     # run a command whose *output* contains text that looks like a marker,
     # to make sure we don't stop early on it.
