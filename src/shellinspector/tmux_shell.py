@@ -74,12 +74,18 @@ class TmuxShell:
         else:
             full_cmd = args
 
-        result = subprocess.run(
-            full_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=timeout,
-        )
+        try:
+            result = subprocess.run(
+                full_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as ex:
+            if self.verbose:
+                print(f"+ {shlex.join(full_cmd)}")
+                print((ex.output or b"").decode(errors="replace").strip())
+            raise TimeoutException((ex.output or b"").decode(errors="replace")) from ex
 
         if self.verbose:
             print(f"+ {shlex.join(full_cmd)}")
@@ -170,23 +176,26 @@ class TmuxShell:
             return
 
         # best-effort cleanup: the server may already be gone (e.g. killed
-        # by something else), so a failure here shouldn't stop close()
-        # from completing or raise out of a cleanup path.
+        # by something else) or unreachable, so a failure here shouldn't
+        # stop close() from completing or raise out of a cleanup path.
         try:
             self._tmux("kill-server", timeout=self.timeout)
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, TimeoutException):
             pass
 
         if self._is_remote and self._control_path:
             # run locally, not via _run(): _run() always wraps args as a
             # remote command, but "ssh -O exit" must run locally against
             # the control socket to tear down the ControlMaster.
-            subprocess.run(
-                ["ssh", "-O", "exit", *self._ssh_opts(), self._ssh_target],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                timeout=self.timeout,
-            )
+            try:
+                subprocess.run(
+                    ["ssh", "-O", "exit", *self._ssh_opts(), self._ssh_target],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    timeout=self.timeout,
+                )
+            except subprocess.TimeoutExpired:
+                pass
 
         self.closed = True
 

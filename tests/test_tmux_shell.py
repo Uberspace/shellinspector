@@ -126,6 +126,14 @@ def test_run_raises_on_nonzero_returncode(shell):
         shell._tmux("capture-pane", "-t", "nonexistent-session", timeout=shell.timeout)
 
 
+def test_run_raises_timeout_exception_on_hung_invocation(shell):
+    # a hung underlying subprocess.run() call (the tmux/ssh invocation
+    # itself, not the remote command being polled for) must surface as
+    # TimeoutException, same as run_command's own polling-loop timeout.
+    with pytest.raises(TimeoutException):
+        shell._run(["sleep", "5"], timeout=0.2)
+
+
 def test_close_kills_tmux_session():
     shell = TmuxShell(timeout=5)
     shell.login()
