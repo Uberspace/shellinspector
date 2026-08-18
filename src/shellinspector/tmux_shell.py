@@ -51,18 +51,13 @@ class TmuxShell:
 
         self.closed = True
 
-        # each instance gets its own tmux server (-L) rather than sharing
-        # the ambient default one: tmux exits its server once its last
-        # session is killed (the default exit-empty behavior), so sharing
-        # a server between instances lets one instance's close() race
-        # another's login() if the closing one happened to hold the last
-        # remaining session.
+        # own tmux server (-L) per instance: the default server exits once
+        # its last session closes, so sharing one risks a close() racing
+        # another instance's login().
         self._socket_name = f"si-{time.time_ns()}-{id(self)}"
         self._session_name = "main"
-        # how many trailing lines of the pane (counting back from the
-        # bottom) are not yet known to belong to a completed command;
-        # _capture_pane() starts each capture -_unread_lines back so it
-        # always includes any content still to be matched.
+        # trailing pane lines not yet known to belong to a completed
+        # command; _capture_pane() starts each capture this far back.
         self._unread_lines = 0
         self._control_path = None
 
@@ -128,14 +123,8 @@ class TmuxShell:
 
         self._unread_lines = 0
 
-        # Remote sessions are launched as a login shell (-l), so PATH and
-        # other env setup from .profile/.bash_profile match what an
-        # interactive `ssh host` session would get (e.g. ~/.local/bin on
-        # PATH) -- pxssh's ssh-based login() gets this for free since sshd
-        # itself starts a login shell; TmuxShell has to ask for it
-        # explicitly since it launches bash directly as a tmux command.
-        # Local sessions intentionally skip profile/rc files to keep them
-        # predictable and match LocalShell's plain `/bin/bash` behavior.
+        # login shell (-l) for remote sessions so PATH/profile setup
+        # matches an interactive `ssh host` session (e.g. ~/.local/bin).
         bash_args = (
             ["bash", "-l"] if self._is_remote else ["bash", "--noprofile", "--norc"]
         )
@@ -172,10 +161,9 @@ class TmuxShell:
         self._tmux("kill-server", timeout=self.timeout)
 
         if self._is_remote and self._control_path:
-            # this must run locally, not via _run() -- _run() always wraps
-            # its args as a command to execute on the remote host, but
-            # "ssh -O exit" needs to run locally against the control
-            # socket to tear down the ControlMaster.
+            # run locally, not via _run(): _run() always wraps args as a
+            # remote command, but "ssh -O exit" must run locally against
+            # the control socket to tear down the ControlMaster.
             subprocess.run(
                 ["ssh", "-O", "exit", *self._ssh_opts(), self._ssh_target],
                 stdout=subprocess.PIPE,
@@ -208,26 +196,17 @@ class TmuxShell:
     def run_command(self, line):
         command_id = f"{time.time_ns()}-{id(self)}"
 
-        # every embedded newline we send is a real keystroke, so bash
-        # echoes and re-prompts for each `\n`-separated segment; a plain
-        # `; `-joined payload keeps that down to a single echoed line
-        # (entirely before the start marker, so it never pollutes the
-        # captured output). That breaks for a `line` containing a heredoc,
-        # since its terminator must be alone on its line -- so only then is
-        # `line` put on its own segment, isolated by real newlines, while
-        # everything around it stays `; `-joined (and thus still only
-        # echoed once, right before the start marker) since neither of
-        # those fixed segments can themselves contain a heredoc.
+        # single-line payload avoids extra echoed prompt redraws; only a
+        # heredoc forces `line` onto its own newline-isolated segment,
+        # since its terminator must be alone on its physical line.
         rc_and_end = f"rc=$?; printf '\\n{COMMAND_END}:{command_id}:%s\\n' \"$rc\""
         if "\n" in line:
             payload = (
                 f"printf '\\n{COMMAND_START}:{command_id}\\n'\n{line}\n{rc_and_end}"
             )
         else:
-            # an empty line would leave two bare `;` back to back (";;"),
-            # which is a syntax error outside a case statement -- ":" is
-            # bash's no-op builtin, so it keeps the payload valid without
-            # changing the returncode/output of a genuinely empty command.
+            # empty line leaves ";;" (syntax error outside case); ":" is
+            # a no-op that keeps the payload valid.
             command = line or ":"
             payload = (
                 f"printf '\\n{COMMAND_START}:{command_id}\\n'; {command}; {rc_and_end}"
@@ -243,10 +222,8 @@ class TmuxShell:
             timeout=self.timeout,
         )
 
-        # anchored to start-of-line so the echoed input line (which contains
-        # this same marker text as a quoted printf argument, not preceded by
-        # a newline) never matches -- only the marker's actual evaluated
-        # output, which printf always prefixes with \n, does.
+        # anchored to start-of-line so the echoed printf argument (not
+        # preceded by a newline) never matches, only its evaluated output.
         re_start = re.compile(
             rf"^{re.escape(COMMAND_START)}:{re.escape(command_id)}$", re.MULTILINE
         )
@@ -254,25 +231,16 @@ class TmuxShell:
             rf"^{re.escape(COMMAND_END)}:{re.escape(command_id)}:(?P<rc>[0-9]+)$",
             re.MULTILINE,
         )
-        # matches the echoed "<prompt> rc=$?; printf ..." line that appears
-        # right before the end marker's real output whenever line contains
-        # a heredoc (see above: that's the only case rc_and_end ends up on
-        # its own echoed segment instead of being consumed silently).
+        # matches the echoed "<prompt> rc=$?; printf ..." line right before
+        # the end marker's real output.
         re_rc_and_end_echo = re.compile(
             rf"^.*{re.escape(rc_and_end)}$\n?", re.MULTILINE
         )
 
         deadline = time.monotonic() + self.timeout
 
-        # self._unread_lines is a good starting guess (it's exactly enough
-        # to cover the previous command's leftovers), but this command's
-        # own output can easily scroll past it before we get to poll --
-        # e.g. a one-line previous command followed by an `export` dumping
-        # hundreds of lines pushes the start marker far below that initial
-        # window. Since the start marker's distance from the current
-        # bottom only grows as more output is appended after it, growing
-        # the window whenever it's still missing always converges instead
-        # of polling an unchanging, too-narrow capture forever.
+        # grow the search window until the start marker is found, so it
+        # always converges instead of polling a too-narrow capture forever.
         search_lines = self._unread_lines
 
         while True:
@@ -299,21 +267,17 @@ class TmuxShell:
         command_output = output[start_match.end() : end_match.start()]
 
         if "\n" in line:
-            # line was sent as its own newline-separated segment, so bash
-            # echoes it back keystroke-for-keystroke across exactly as many
-            # physical lines as line itself has; skip that echoed block
-            # rather than trying to match its rendering (which includes
-            # bash's own "> " continuation prompt for heredoc bodies). +1
-            # of the split count is the blank line printf(START) itself
-            # ends with, right before the echo of line begins.
+            # bash echoes line back across as many physical lines as it has
+            # (plus its own "> " heredoc continuation prompts); skip that
+            # echoed block rather than pattern-matching it. +2 accounts for
+            # printf(START)'s own blank line plus the split-count offset.
             command_output = command_output.split("\n", line.count("\n") + 2)[-1]
             command_output = re_rc_and_end_echo.sub("", command_output)
 
         command_output = command_output.strip("\n")
 
-        # next capture starts fresh relative to a new "now", so remember
-        # only the trailing content after our end marker (e.g. the next
-        # prompt) that hasn't been consumed yet and must be re-included.
+        # trailing content after the end marker (e.g. the next prompt) that
+        # the next capture must still include.
         self._unread_lines = output[end_match.end() :].count("\n")
 
         self._last_returncode = int(end_match.group("rc"))

@@ -263,12 +263,10 @@ def test_large_output(shell):
 
 
 def test_large_output_after_tiny_command(shell):
-    # a tiny command (e.g. "echo x") leaves self._unread_lines very small.
-    # If the next command produces much more output than that (e.g.
-    # "export" dumping hundreds of env vars), the start marker scrolls
-    # past that narrow initial capture window before the first poll --
-    # the window must grow to find it instead of polling an unchanging,
-    # too-narrow capture until timeout.
+    # a tiny command leaves self._unread_lines small; if the next command
+    # produces much more output, the start marker scrolls past that
+    # narrow initial window before the first poll, so the window must
+    # grow to find it instead of polling an unchanging one until timeout.
     shell.run_command("echo x")
     output = shell.run_command("seq 1 500")
     lines = output.splitlines()

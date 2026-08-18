@@ -255,10 +255,8 @@ def run(
         print(" ")
         print("Wrote .si-retry file, the next run will only run these spec files.")
 
-    # TmuxShell sessions are detached tmux servers (local or remote) that
-    # outlive this process by design, so nothing tears them down on its
-    # own -- unlike the old pexpect-based sessions, which died with this
-    # process automatically since they were plain child ptys.
+    # TmuxShell sessions outlive this process by design (detached tmux
+    # servers), so they must be closed explicitly here.
     for session in runner.sessions.values():
         try:
             session.close()
