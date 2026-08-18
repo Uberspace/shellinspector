@@ -122,7 +122,7 @@ class TmuxShell:
 
     def login(self):
         if self._is_remote:
-            self._control_path = f"/tmp/si-tmux-ctl-{id(self)}"
+            self._control_path = f"/tmp/si-tmux-ctl-{time.time_ns()}-{id(self)}"
             # establish the multiplexed master connection up front
             self._run(["true"], timeout=self.timeout)
 
