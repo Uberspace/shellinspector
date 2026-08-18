@@ -129,6 +129,12 @@ class TmuxShell:
             ["bash", "-l"] if self._is_remote else ["bash", "--noprofile", "--norc"]
         )
 
+        # PS1 is inherited from the environment; --noprofile/--norc/-l
+        # don't reset it. An exported PS1 with syntax bash can't parse
+        # (e.g. a zsh prompt with $(...) substitutions) gets evaluated on
+        # every prompt redraw and pollutes captured output, so pin it.
+        bash_args = ["env", "PS1=[\\u@\\h \\W]\\$ ", *bash_args]
+
         self._tmux(
             "new-session",
             "-d",
