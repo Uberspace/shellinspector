@@ -13,6 +13,7 @@ from shellinspector.runner import ShellinspectorPyContext
 from shellinspector.runner import ShellRunner
 from shellinspector.runner import disable_color
 from shellinspector.runner import run_in_file
+from shellinspector.tmux_shell import TimeoutException
 from shellinspector.tmux_shell import TmuxShell
 
 
@@ -85,133 +86,6 @@ def test_disable_color_no_term():
 
     if old_term is not None:
         os.environ["TERM"] = old_term
-
-
-def test_localshell():
-    with disable_color():
-        shell = LocalShell(timeout=2)
-        shell.login()
-    shell.sendline("echo a && echo b")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode() == "a\r\nb\r\n"
-    shell.sendline("echo c")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode() == "c\r\n"
-
-
-def test_localshell_state():
-    with disable_color():
-        shell = LocalShell(timeout=2)
-        shell.login()
-
-    shell.sendline("echo $OUTERVAR")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == ""
-
-    shell.sendline("export OUTERVAR=1")
-    assert shell.prompt(), shell.before
-    shell.sendline("echo $OUTERVAR")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == "1"
-
-    shell.push_state()
-
-    shell.sendline("echo $OUTERVAR")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == "1"
-
-    shell.sendline("export INNERVAR=1")
-    assert shell.prompt(), shell.before
-
-    shell.sendline("echo $INNERVAR")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == "1"
-
-    shell.pop_state()
-
-    shell.sendline("echo $OUTERVAR")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == "1"
-
-    shell.sendline("echo $INNERVAR")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == ""
-
-
-def test_localshell_state_kill_session():
-    with disable_color():
-        shell = LocalShell(timeout=2)
-        shell.login()
-
-    shell.push_state()
-
-    shell.sendline("exit")
-    assert shell.prompt(), shell.before
-
-    with pytest.raises(Exception, match="Test shell was exited.*"):
-        shell.pop_state()
-
-
-def test_localshell_set_environment():
-    with disable_color():
-        shell = LocalShell(timeout=2)
-        shell.login()
-
-    shell.set_environment(
-        {
-            "VAR1": "aa",
-            "VAR2": "bb",
-        }
-    )
-
-    shell.sendline("echo $VAR1")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == "aa"
-
-    shell.sendline("echo $VAR2")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode().strip() == "bb"
-
-
-def test_remoteshell(ssh_config):
-    with disable_color():
-        shell = RemoteShell(timeout=2)
-        shell.login(**ssh_config)
-
-    shell.sendline("echo a && echo b")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode() == "a\r\nb\r\n"
-    shell.sendline("echo c")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode() == "c\r\n"
-
-
-def test_remoteshell_get_environment(ssh_config):
-    with disable_color():
-        shell = RemoteShell(timeout=2)
-        shell.login(**ssh_config)
-
-    shell.sendline("export SPACES='a b'")
-    assert shell.prompt(), shell.before
-
-    env = shell.get_environment()
-    assert len(env) > 5
-    assert env["HOME"] == "/root"
-    assert env["SPACES"] == "a b"
-
-
-def test_get_localshell():
-    shell = get_localshell(5)
-    shell.sendline("echo a")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode() == "a\r\n"
-
-
-def test_get_ssh_session(ssh_config):
-    shell = get_ssh_session(ssh_config, 5)
-    shell.sendline("echo a")
-    assert shell.prompt(), shell.before
-    assert shell.before.decode() == "a\r\n"
 
 
 def test_add_reporter():
@@ -614,23 +488,21 @@ def test_get_session(make_runner, ssh_config, user, host, expected_class):
         None,
     )
 
-    session1 = runner._get_session(cmd, 5)
+    session1, _ = runner._get_session(cmd, 5)
 
     assert isinstance(session1, expected_class)
 
-    session1.sendline("echo a")
-    assert session1.prompt()
-    assert session1.before.decode().strip() == "a"
+    assert session1.run_command("echo a").strip() == "a"
 
-    session2 = runner._get_session(cmd, 5)
+    session2, _ = runner._get_session(cmd, 5)
     assert id(session1) == id(session2)
 
     cmd.session_name = "a"
 
-    session3 = runner._get_session(cmd, 5)
+    session3, _ = runner._get_session(cmd, 5)
     assert id(session1) != id(session3)
 
-    session4 = runner._get_session(cmd, 5)
+    session4, _ = runner._get_session(cmd, 5)
     assert id(session3) == id(session4)
 
 
@@ -665,7 +537,7 @@ def test_timeout_setting(
     specfile = Specfile("virtual.ispec")
     specfile.commands = [command_local_echo_literal, command_remote_echo_literal]
 
-    runner.run(specfile)
+    runner.run(specfile, close_sessions=False)
 
     for event in events:
         assert event[0][0] in (
@@ -872,43 +744,36 @@ def test_environment2(make_runner, ssh_config, command_local_echo_literal_env_va
 
 
 class FakeSession:
-    def __init__(self, prompt_works, before):
-        self._prompt_works = prompt_works
-        self._before = before
-        self._lines = []
-        self._closed = False
+    def __init__(self, command_output, returncode=0, env=None, timeout_exc=None):
+        self._command_output = command_output
+        self._returncode = returncode
+        self._env = env or {}
+        self._timeout_exc = timeout_exc
+        self.closed = False
 
-    def sendline(self, line):
-        self._lines.append(line)
+    def run_command(self, _line):
+        if self._timeout_exc is not None:
+            raise self._timeout_exc
+        return self._command_output
 
-    def prompt(self):
-        if not self._before:
-            raise Exception(
-                "Ran out of before outputs, provide more. Lines so far: "
-                + ",".join(self._lines)
-            )
-        self.before = self._before.pop(0)
-        return self._prompt_works.pop(0)
+    def get_returncode(self):
+        return self._returncode
+
+    def get_environment(self):
+        return self._env
 
     def close(self):
-        self._closed = True
-
-    def push_state(self):
-        pass
-
-    def pop_state(self):
-        pass
+        self.closed = True
 
     def set_environment(self, env):
         pass
 
 
 @pytest.mark.parametrize(
-    "prompt_works,actual_output,expected_result,expected_events",
+    "session,expected_result,expected_events",
     (
         (
-            [True, True, True, True],
-            [b"a", b"", b"0", b"a=b"],
+            FakeSession("a", returncode=0, env={"a": "b"}),
             True,
             [
                 (
@@ -918,8 +783,7 @@ class FakeSession:
             ],
         ),
         (
-            [False, True, True],
-            [b"a", b"", b"0"],
+            FakeSession("a", timeout_exc=TimeoutException("a")),
             False,
             [
                 (
@@ -931,31 +795,15 @@ class FakeSession:
                 ),
             ],
         ),
-        (
-            [True, True, False],
-            [b"a", b"", b"0"],
-            False,
-            [
-                (
-                    RunnerEvent.ERROR,
-                    {
-                        "message": "timeout, could not find prompt for return code",
-                        "actual": "0",
-                    },
-                )
-            ],
-        ),
     ),
 )
 def test_run_command(
     make_runner,
     command_local_echo_literal_fail,
-    prompt_works,
-    actual_output,
+    session,
     expected_result,
     expected_events,
 ):
-    session = FakeSession(prompt_works, actual_output)
     runner, events = make_runner()
     result = runner._run_command(session, command_local_echo_literal_fail)
     assert result == expected_result, events
@@ -969,11 +817,10 @@ def test_run_command(
 
 
 @pytest.mark.parametrize(
-    "prompt_works,actual_output,expected_result,expected_events",
+    "session,expected_result,expected_events",
     (
         (
-            [True, True, True, True],
-            [b"a", b"", b"0", b"a=b"],
+            FakeSession("a", returncode=0, env={"a": "b"}),
             True,
             [
                 (RunnerEvent.RUN_STARTING, None, {}),
@@ -991,8 +838,7 @@ def test_run_command(
             ],
         ),
         (
-            [True, True, True, True],
-            [b"a", b"", b"1", b"a=b"],
+            FakeSession("a", returncode=1, env={"a": "b"}),
             False,
             [
                 (RunnerEvent.RUN_STARTING, None, {}),
@@ -1015,14 +861,12 @@ def test_run_command(
 def test_run1(
     make_runner,
     command_local_echo_literal_fail,
-    prompt_works,
-    actual_output,
+    session,
     expected_result,
     expected_events,
 ):
     runner, events = make_runner()
-    session = FakeSession(prompt_works, actual_output)
-    runner._get_session = lambda cmd, timeout: session
+    runner._get_session = lambda cmd, timeout: (session, True)
     specfile = Specfile("virtual.ispec")
     specfile.commands = [command_local_echo_literal_fail]
 
