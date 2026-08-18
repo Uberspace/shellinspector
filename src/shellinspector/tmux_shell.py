@@ -85,6 +85,11 @@ class TmuxShell:
             print(f"+ {shlex.join(full_cmd)}")
             print(result.stdout.decode(errors="replace").strip())
 
+        if result.returncode != 0:
+            raise subprocess.CalledProcessError(
+                result.returncode, full_cmd, output=result.stdout
+            )
+
         return result
 
     def _tmux(self, *args, timeout=None):
@@ -164,7 +169,13 @@ class TmuxShell:
         if self.closed:
             return
 
-        self._tmux("kill-server", timeout=self.timeout)
+        # best-effort cleanup: the server may already be gone (e.g. killed
+        # by something else), so a failure here shouldn't stop close()
+        # from completing or raise out of a cleanup path.
+        try:
+            self._tmux("kill-server", timeout=self.timeout)
+        except subprocess.CalledProcessError:
+            pass
 
         if self._is_remote and self._control_path:
             # run locally, not via _run(): _run() always wraps args as a

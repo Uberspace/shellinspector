@@ -119,6 +119,13 @@ def test_run_command_timeout():
     assert shell.closed is True
 
 
+def test_run_raises_on_nonzero_returncode(shell):
+    # a failed tmux/ssh invocation (not the polled-for remote command)
+    # must raise rather than be silently treated as success.
+    with pytest.raises(subprocess.CalledProcessError):
+        shell._tmux("capture-pane", "-t", "nonexistent-session", timeout=shell.timeout)
+
+
 def test_close_kills_tmux_session():
     shell = TmuxShell(timeout=5)
     shell.login()
@@ -140,6 +147,17 @@ def test_close_kills_tmux_session():
 def test_close_is_idempotent(shell):
     shell.close()
     shell.close()
+    assert shell.closed is True
+
+
+def test_close_tolerates_already_dead_server(shell):
+    # server can die out from under the controller (e.g. crashed, or
+    # killed by something else); close() must still complete cleanly
+    # rather than raising out of a cleanup path.
+    subprocess.run(["tmux", "-L", shell._socket_name, "kill-server"])
+
+    shell.close()
+
     assert shell.closed is True
 
 
