@@ -231,6 +231,21 @@ def test_large_output(shell):
     assert len(lines) == 500
 
 
+def test_large_output_after_tiny_command(shell):
+    # a tiny command (e.g. "echo x") leaves self._unread_lines very small.
+    # If the next command produces much more output than that (e.g.
+    # "export" dumping hundreds of env vars), the start marker scrolls
+    # past that narrow initial capture window before the first poll --
+    # the window must grow to find it instead of polling an unchanging,
+    # too-narrow capture until timeout.
+    shell.run_command("echo x")
+    output = shell.run_command("seq 1 500")
+    lines = output.splitlines()
+    assert lines[0] == "1"
+    assert lines[-1] == "500"
+    assert len(lines) == 500
+
+
 def test_or_true_swallows_nonzero_exit(shell):
     # roles/sudo/tests/remove-sudo.ispec and others rely on `|| true` to
     # turn a failing command into a passing one.

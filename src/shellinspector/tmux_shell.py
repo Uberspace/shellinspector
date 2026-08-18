@@ -179,13 +179,12 @@ class TmuxShell:
 
         self.closed = True
 
-    def _capture_pane(self):
+    def _capture_pane(self, lines_back):
         """
-        Capture from self._unread_lines lines back through the current
-        bottom of the pane (-S -N -E -), i.e. everything not yet known to
-        belong to a completed command.
+        Capture from lines_back lines back through the current bottom of
+        the pane (-S -N -E -).
         """
-        start = f"-{self._unread_lines}" if self._unread_lines else "-"
+        start = f"-{lines_back}" if lines_back else "-"
 
         result = self._tmux(
             "capture-pane",
@@ -254,8 +253,19 @@ class TmuxShell:
 
         deadline = time.monotonic() + self.timeout
 
+        # self._unread_lines is a good starting guess (it's exactly enough
+        # to cover the previous command's leftovers), but this command's
+        # own output can easily scroll past it before we get to poll --
+        # e.g. a one-line previous command followed by an `export` dumping
+        # hundreds of lines pushes the start marker far below that initial
+        # window. Since the start marker's distance from the current
+        # bottom only grows as more output is appended after it, growing
+        # the window whenever it's still missing always converges instead
+        # of polling an unchanging, too-narrow capture forever.
+        search_lines = self._unread_lines
+
         while True:
-            output = self._capture_pane()
+            output = self._capture_pane(search_lines)
 
             start_match = re_start.search(output)
 
@@ -265,6 +275,9 @@ class TmuxShell:
 
             if start_match and end_match:
                 break
+
+            if not start_match:
+                search_lines = max(search_lines, 1) * 2
 
             if time.monotonic() > deadline:
                 self.close()
