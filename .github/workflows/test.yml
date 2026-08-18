@@ -41,7 +41,7 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir ~/.ssh
-          echo 'Host *\nStrictHostKeyChecking no\n' >> ~/.ssh/config
+          printf 'Host *\n  StrictHostKeyChecking no\n' >> ~/.ssh/config
           chmod 0700 ~/.ssh
           chmod 0600 ~/.ssh/config
           chmod 0600 tests/keys/id_ed25519
