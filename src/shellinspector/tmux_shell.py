@@ -172,8 +172,14 @@ class TmuxShell:
         self._tmux("kill-server", timeout=self.timeout)
 
         if self._is_remote and self._control_path:
-            self._run(
+            # this must run locally, not via _run() -- _run() always wraps
+            # its args as a command to execute on the remote host, but
+            # "ssh -O exit" needs to run locally against the control
+            # socket to tear down the ControlMaster.
+            subprocess.run(
                 ["ssh", "-O", "exit", *self._ssh_opts(), self._ssh_target],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 timeout=self.timeout,
             )
 
@@ -339,16 +345,3 @@ class TmuxShell:
     def set_environment(self, context):
         for k, v in context.items():
             self.run_command(f"export {k}={shlex.quote(str(v))}")
-
-    def push_state(self):
-        # RemoteShell isolates env vars per spec-file run via a nested bash
-        # (see runner.py), which doesn't translate to run_command()'s
-        # marker-based, single-line-joined synchronization -- launching a
-        # nested shell blocks the marker roundtrip until that shell exits.
-        # Skipped for this spike: not needed for perf comparison, and
-        # tmux's persistent session (plus ControlMaster reuse once wired)
-        # may remove the need for this kind of isolation entirely.
-        pass
-
-    def pop_state(self):
-        pass

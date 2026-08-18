@@ -1,4 +1,5 @@
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +10,27 @@ from shellinspector.tmux_shell import TmuxShell
 @pytest.fixture
 def shell():
     shell = TmuxShell(timeout=5)
+    shell.login()
+    yield shell
+    shell.close()
+
+
+@pytest.fixture
+def ssh_key_path():
+    path = Path(__file__).parent / "keys/id_ed25519"
+    assert path.exists()
+    return path
+
+
+@pytest.fixture
+def remote_shell(ssh_key_path):
+    shell = TmuxShell(
+        timeout=5,
+        server="127.0.0.1",
+        port=2222,
+        username="root",
+        ssh_key=ssh_key_path,
+    )
     shell.login()
     yield shell
     shell.close()
@@ -262,25 +284,93 @@ def test_semicolon_then_echo_rc(shell):
     assert shell.get_returncode() == 0
 
 
-def test_push_pop_state_are_noops(shell):
-    # push_state()/pop_state() are stubbed as no-ops for now (see
-    # tmux_shell.py) -- just check they exist and don't raise, since
-    # ShellRunner.run() calls them unconditionally around every spec-file
-    # run.
-    shell.push_state()
-    shell.pop_state()
-
-
-def test_pop_state_noop_after_close():
-    shell = TmuxShell(timeout=5)
-    shell.login()
-    shell.close()
-    shell.pop_state()
-
-
 def test_exported_function_persists(shell):
     # tests/mail-sending.ispec defines a shell function and exports it
     # with `export -f`, then calls it from a later command line.
     shell.run_command("greet() { echo hi $1; }; export -f greet")
     output = shell.run_command("greet world")
     assert output == "hi world"
+
+
+def test_remote_run_command_output(remote_shell):
+    output = remote_shell.run_command("echo a && echo b")
+    assert output == "a\nb"
+    assert remote_shell.get_returncode() == 0
+
+    output = remote_shell.run_command("echo c")
+    assert output == "c"
+    assert remote_shell.get_returncode() == 0
+
+
+def test_remote_run_command_state_persists(remote_shell):
+    remote_shell.run_command("cd /tmp")
+    output = remote_shell.run_command("pwd")
+    assert output == "/tmp"
+
+
+def test_remote_get_environment(remote_shell):
+    remote_shell.run_command("export SPACES='a b'")
+
+    env = remote_shell.get_environment()
+    assert len(env) > 5
+    assert env["HOME"] == "/root"
+    assert env["SPACES"] == "a b"
+
+
+def test_remote_login_is_login_shell(remote_shell):
+    # remote sessions are launched as `bash -l` so PATH/profile setup
+    # matches what an interactive `ssh host` session gets.
+    output = remote_shell.run_command("shopt -q login_shell && echo yes || echo no")
+    assert output == "yes"
+
+
+def test_remote_control_master_reused_across_commands(remote_shell):
+    # ControlPersist keeps one master connection alive; every run_command
+    # after login() should reuse it instead of re-authenticating, so the
+    # control socket must exist and stay the same throughout.
+    control_path = remote_shell._control_path
+    assert Path(control_path).exists()
+
+    remote_shell.run_command("echo one")
+    remote_shell.run_command("echo two")
+
+    assert remote_shell._control_path == control_path
+    assert Path(control_path).exists()
+
+
+def test_remote_close_tears_down_control_master(ssh_key_path):
+    shell = TmuxShell(
+        timeout=5,
+        server="127.0.0.1",
+        port=2222,
+        username="root",
+        ssh_key=ssh_key_path,
+    )
+    shell.login()
+    control_path = shell._control_path
+    assert Path(control_path).exists()
+
+    shell.close()
+
+    assert shell.closed is True
+    assert not Path(control_path).exists()
+
+
+def test_two_remote_sessions_do_not_share_control_socket(ssh_key_path):
+    shell1 = TmuxShell(
+        timeout=5, server="127.0.0.1", port=2222, username="root", ssh_key=ssh_key_path
+    )
+    shell1.login()
+    shell2 = TmuxShell(
+        timeout=5, server="127.0.0.1", port=2222, username="root", ssh_key=ssh_key_path
+    )
+    shell2.login()
+
+    assert shell1._control_path != shell2._control_path
+
+    shell1.set_environment({"ONLY_IN_1": "yes"})
+    assert shell1.run_command("echo $ONLY_IN_1") == "yes"
+    assert shell2.run_command("echo $ONLY_IN_1") == ""
+
+    shell1.close()
+    shell2.close()
