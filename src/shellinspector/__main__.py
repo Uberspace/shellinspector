@@ -161,14 +161,13 @@ def run(
         print(
             "run-scoped fixture: " + spec_file.fixture_specfile_pre.get_pretty_string()
         )
-        sessions = set()
-        file_success = runner.run(spec_file.fixture_specfile_pre, sessions)
+        file_success = runner.run(spec_file.fixture_specfile_pre, close_sessions=False)
 
         if not file_success:
             print(colored(f"Fixture {spec_file.fixture} failed", "red"))
             return 1
 
-        for session in sessions:
+        for session in runner.sessions.values():
             try:
                 si_user_values[spec_file.fixture_specfile_pre.path] = (
                     session.get_environment()["SI_USER"]
@@ -176,8 +175,6 @@ def run(
                 break
             except Exception:
                 pass
-
-            session.pop_state()
 
         print(" ")
 
@@ -223,6 +220,13 @@ def run(
             continue
 
         handled_fixtures.add(spec_file.fixture_specfile_post.path)
+
+        if (
+            spec_file.fixture_specfile_pre
+            and spec_file.fixture_specfile_pre.path in si_user_values
+        ):
+            si_user = si_user_values[spec_file.fixture_specfile_pre.path]
+            spec_file.fixture_specfile_post.environment["SI_USER"] = si_user
 
         print(" ")
         print(

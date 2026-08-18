@@ -125,6 +125,11 @@ class ShellRunner:
         else:
             raise NotImplementedError(f"Unknown host: {cmd.host}")
 
+    def close_all_sessions(self):
+        for session in self.sessions.values():
+            session.close()
+        self.sessions.clear()
+
     def _close_session(self, cmd):
         key = self._get_session_key(cmd)
 
@@ -179,7 +184,7 @@ class ShellRunner:
                 None,
             ),
             timeout_seconds,
-        )
+        )[0]
 
     def _get_session(self, cmd, timeout_seconds):
         """
@@ -200,16 +205,19 @@ class ShellRunner:
         if key not in self.sessions:
             # connect, if there is no session
             self.sessions[key] = self._make_session(key, cmd, timeout_seconds)
+            created = True
         elif self.sessions[key].closed:
             # destroy and reconnect, if there is a broken session
             LOGGER.debug("closing failed session: %s", key)
             self._close_session(cmd)
             self.sessions[key] = self._make_session(key, cmd, timeout_seconds)
+            created = True
         else:
             # reuse, if we're already connected
             LOGGER.debug("reusing session: %s", key)
+            created = False
 
-        return self.sessions[key]
+        return self.sessions[key], created
 
     def add_reporter(self, reporter):
         self.reporters.append(reporter)
@@ -283,12 +291,7 @@ class ShellRunner:
             session.get_environment(),
         )
 
-    def run(self, specfile: Specfile, outer_used_sessions=None):
-        if outer_used_sessions is not None:
-            used_sessions = outer_used_sessions
-        else:
-            used_sessions = set()
-
+    def run(self, specfile: Specfile, close_sessions=True):
         self.report(RunnerEvent.RUN_STARTING, None, {})
 
         try:
@@ -296,12 +299,14 @@ class ShellRunner:
                 specfile.fixture_specfile_pre
                 and specfile.fixture_scope == FixtureScope.FILE
             ):
-                pre_success = self.run(specfile.fixture_specfile_pre, used_sessions)
+                pre_success = self.run(
+                    specfile.fixture_specfile_pre, close_sessions=False
+                )
                 if not pre_success:
                     return False
 
                 si_user = None
-                for session in used_sessions:
+                for session in self.sessions.values():
                     try:
                         si_user = session.get_environment()["SI_USER"]
                         break
@@ -311,7 +316,7 @@ class ShellRunner:
                 if si_user:
                     specfile.environment["SI_USER"] = si_user
 
-                    for session in used_sessions:
+                    for session in self.sessions.values():
                         session.set_environment({"SI_USER": si_user})
 
             for cmd in specfile.commands:
@@ -337,7 +342,9 @@ class ShellRunner:
                         return False
 
                 try:
-                    session = self._get_session(cmd, specfile.settings.timeout_seconds)
+                    session, session_created = self._get_session(
+                        cmd, specfile.settings.timeout_seconds
+                    )
                 except Exception as ex:
                     self.report(
                         RunnerEvent.COMMAND_FAILED,
@@ -350,11 +357,9 @@ class ShellRunner:
                     self.report(RunnerEvent.RUN_FAILED, None, {})
                     return False
 
-                if session not in used_sessions:
-                    used_sessions.add(session)
+                if session_created:
                     session.set_environment(specfile.environment)
                     session.set_environment(self.context)
-                    session.push_state()
 
                 if cmd.execution_mode == ExecutionMode.PYTHON:
                     ctx = ShellinspectorPyContext({}, {})
@@ -388,13 +393,14 @@ class ShellRunner:
                             specfile.fixture_specfile_post
                             and specfile.fixture_scope == FixtureScope.FILE
                         ):
-                            self.run(specfile.fixture_specfile_post, used_sessions)
+                            self.run(
+                                specfile.fixture_specfile_post, close_sessions=False
+                            )
 
                         return False
                 else:
                     if cmd.command == "logout":
                         self._close_session(cmd)
-                        used_sessions.remove(session)
                         self.report(
                             RunnerEvent.COMMAND_PASSED,
                             cmd,
@@ -409,7 +415,9 @@ class ShellRunner:
                             specfile.fixture_specfile_post
                             and specfile.fixture_scope == FixtureScope.FILE
                         ):
-                            self.run(specfile.fixture_specfile_post, used_sessions)
+                            self.run(
+                                specfile.fixture_specfile_post, close_sessions=False
+                            )
 
                         return False
 
@@ -417,14 +425,15 @@ class ShellRunner:
                 specfile.fixture_specfile_post
                 and specfile.fixture_scope == FixtureScope.FILE
             ):
-                post_success = self.run(specfile.fixture_specfile_post, used_sessions)
+                post_success = self.run(
+                    specfile.fixture_specfile_post, close_sessions=False
+                )
                 if not post_success:
                     return False
 
         finally:
-            if outer_used_sessions is None:
-                for session in used_sessions:
-                    session.pop_state()
+            if close_sessions:
+                self.close_all_sessions()
 
         self.report(RunnerEvent.RUN_SUCCEEDED, None, {})
 
