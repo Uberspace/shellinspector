@@ -88,7 +88,7 @@ class TmuxShell:
 
         if self.verbose:
             print(f"+ {shlex.join(full_cmd)}")
-            print(result.stdout.decode(errors="replace"))
+            print(result.stdout.decode(errors="replace").strip())
 
         return result
 
