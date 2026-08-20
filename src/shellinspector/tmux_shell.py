@@ -234,8 +234,24 @@ class TmuxShell:
             # empty line leaves ";;" (syntax error outside case); ":" is
             # a no-op that keeps the payload valid.
             command = line or ":"
+
+            if command.rstrip().endswith("&"):
+                # job control (enabled by default in an interactive shell)
+                # echoes a "[1] <pid>" line when the job starts and a
+                # "Done ..." line later, right before the next prompt --
+                # the latter lands in the *next* command's captured output.
+                # "set +m" plus redirecting the group's stderr silences
+                # both while the backgrounded job still runs normally.
+                command = f"set +m; {{ {command} }} 2>/dev/null"
+
+            # a command already ending in its own terminator (";" or "&",
+            # e.g. a backgrounded job) must not get a second one appended,
+            # since "cmd & ; rc=$?" is a syntax error (empty statement
+            # between two terminators).
+            sep = "" if command.rstrip().endswith((";", "&")) else " ;"
             payload = (
-                f"printf '\\n{COMMAND_START}:{command_id}\\n'; {command}; {rc_and_end}"
+                f"printf '\\n{COMMAND_START}:{command_id}\\n'; "
+                f"{command}{sep} {rc_and_end}"
             )
 
         self._tmux(

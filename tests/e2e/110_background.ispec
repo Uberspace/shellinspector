@@ -1,0 +1,4 @@
+[@local]$ (sleep 3s >/dev/null 2>&1; touch /tmp/a) &
+[@local]$ sleep 5s
+[@local]$ test -f /tmp/a
+[@local]$ sleep 3s >/dev/null 2>&1 &
