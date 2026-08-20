@@ -277,6 +277,33 @@ def test_parse_trailing_comment():
     assert commands[1].expected == "a # b"
 
 
+def test_parse_trailing_semicolon():
+    specfile = parse(
+        "/dev/null",
+        make_stream(
+            [
+                "$ echo a;",
+                "a",
+                "$ echo a; ",
+                "a",
+                "$ echo a;;",
+                "a",
+                "$ echo a; # comment",
+                "a",
+            ]
+        ),
+    )
+    commands, errors = (specfile.commands, specfile.errors)
+
+    assert len(errors) == 0
+    assert len(commands) == 4
+
+    assert commands[0].command == "echo a"
+    assert commands[1].command == "echo a"
+    assert commands[2].command == "echo a"
+    assert commands[3].command == "echo a"
+
+
 def test_parse_no_user():
     specfile = parse(
         "/dev/null",

@@ -191,6 +191,11 @@ def strip_trailing_comment(command: str) -> str:
     return command
 
 
+def strip_trailing_semicolon(command: str) -> str:
+    stripped = command.rstrip()
+    return stripped.rstrip(";") if stripped.endswith(";") else command
+
+
 def parse_yaml_multidoc(stream: typing.IO) -> tuple[dict, str]:
     if stream.read(3) != "---":
         stream.seek(0)
@@ -305,7 +310,9 @@ def parse_commands(
 
         # start of a new command
         if prefix:
-            command = strip_trailing_comment(line[prefix.span()[1] :])
+            command = line[prefix.span()[1] :]
+            command = strip_trailing_comment(command)
+            command = strip_trailing_semicolon(command)
             user, session_name, host, execution_mode, assert_mode = prefix.group(
                 "user", "session_name", "host", "execution_mode", "assert_mode"
             )
