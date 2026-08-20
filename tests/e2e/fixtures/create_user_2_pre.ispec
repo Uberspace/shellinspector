@@ -1,2 +1,5 @@
 % export SI_USER=create_user_2
 % adduser -D create_user_2
+%_ passwd -u create_user_2
+%_ cp -r /root/.ssh /home/create_user_2/
+%_ chown -R create_user_2:create_user_2 /home/create_user_2/.ssh

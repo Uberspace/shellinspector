@@ -323,23 +323,30 @@ class ShellRunner:
                 self.report(RunnerEvent.COMMAND_STARTING, cmd, {})
 
                 if cmd.user is None and cmd.host == "remote":
-                    root_env = self._get_root_session(
-                        specfile.settings.timeout_seconds
-                    ).get_environment()
+                    if "SI_USER" in specfile.environment:
+                        # fixture-propagated value, trusted even if the
+                        # session that originally set it up is gone
+                        cmd.user = specfile.environment["SI_USER"]
+                    else:
+                        # not propagated via a fixture, look for a value
+                        # exported earlier in this same spec file
+                        root_env = self._get_root_session(
+                            specfile.settings.timeout_seconds
+                        ).get_environment()
 
-                    try:
-                        cmd.user = root_env["SI_USER"]
-                    except LookupError:
-                        self.report(
-                            RunnerEvent.COMMAND_FAILED,
-                            cmd,
-                            {
-                                "message": f"Could not open session: no user was specified and $SI_USER is unset. Found env: {root_env}",
-                                "reasons": [],
-                            },
-                        )
-                        self.report(RunnerEvent.RUN_FAILED, None, {})
-                        return False
+                        try:
+                            cmd.user = root_env["SI_USER"]
+                        except LookupError:
+                            self.report(
+                                RunnerEvent.COMMAND_FAILED,
+                                cmd,
+                                {
+                                    "message": f"Could not open session: no user was specified and $SI_USER is unset. Found env: {root_env}",
+                                    "reasons": [],
+                                },
+                            )
+                            self.report(RunnerEvent.RUN_FAILED, None, {})
+                            return False
 
                 try:
                     session, session_created = self._get_session(

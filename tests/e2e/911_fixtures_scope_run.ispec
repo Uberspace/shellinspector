@@ -6,6 +6,13 @@ settings:
   fixture_dirs:
     - fixtures
 ---
+# regression test: SI_USER must resolve here, as the very first command
+# of this spec file, even though this is a different spec file than
+# 910_fixtures_scope_run.ispec and no session from the fixture necessarily
+# survived until now
+$ whoami
+create_user_2
+
 # is the file still there even though the user is created/deleted via fixture
 # and this is a different spec file than 910_fixtures_run.ispec?
 % cat /home/create_user_2/910_fixtures_run_test
