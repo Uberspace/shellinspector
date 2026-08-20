@@ -176,6 +176,21 @@ RE_PREFIX = re.compile(
 )
 
 
+def strip_trailing_comment(command: str) -> str:
+    in_quote = None
+
+    for i, char in enumerate(command):
+        if in_quote:
+            if char == in_quote:
+                in_quote = None
+        elif char in "\"'":
+            in_quote = char
+        elif char == "#" and i > 0 and command[i - 1] == " ":
+            return command[:i].rstrip()
+
+    return command
+
+
 def parse_yaml_multidoc(stream: typing.IO) -> tuple[dict, str]:
     if stream.read(3) != "---":
         stream.seek(0)
@@ -290,7 +305,7 @@ def parse_commands(
 
         # start of a new command
         if prefix:
-            command = line[prefix.span()[1] :]
+            command = strip_trailing_comment(line[prefix.span()[1] :])
             user, session_name, host, execution_mode, assert_mode = prefix.group(
                 "user", "session_name", "host", "execution_mode", "assert_mode"
             )

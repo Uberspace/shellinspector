@@ -252,6 +252,31 @@ def test_parse_here_doc():
     assert commands[0].expected == "foo\nbar"
 
 
+def test_parse_trailing_comment():
+    specfile = parse(
+        "/dev/null",
+        make_stream(
+            [
+                "$ echo a  # this is stripped",
+                "a",
+                '$ echo "a # b"',
+                "a # b",
+            ]
+        ),
+    )
+    commands, errors = (specfile.commands, specfile.errors)
+
+    assert len(errors) == 0
+    assert len(commands) == 2
+
+    assert commands[0].command == "echo a"
+    assert commands[0].expected == "a"
+
+    # a "#" inside quotes is not treated as a comment
+    assert commands[1].command == 'echo "a # b"'
+    assert commands[1].expected == "a # b"
+
+
 def test_parse_no_user():
     specfile = parse(
         "/dev/null",

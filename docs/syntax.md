@@ -288,6 +288,13 @@ a
 # EOF
 ```
 
+A comment can also follow a command on the same line, if preceded by a space:
+
+```shell
+$ echo a  # this comment is stripped
+a
+```
+
 ## Target user & machine
 
 Use `[user@host]` to specify which user and host will be used for the
