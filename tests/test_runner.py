@@ -783,13 +783,13 @@ class FakeSession:
             ],
         ),
         (
-            FakeSession("a", timeout_exc=TimeoutException("a")),
+            FakeSession("a", timeout_exc=TimeoutException("a", "global", 5)),
             False,
             [
                 (
                     RunnerEvent.ERROR,
                     {
-                        "message": "timeout, could not find prompt for command",
+                        "message": "global timeout, 5s, could not find end of command output",
                         "actual": "a",
                     },
                 ),
