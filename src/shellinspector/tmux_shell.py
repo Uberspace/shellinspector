@@ -316,7 +316,10 @@ class TmuxShell:
             command_output = command_output.split("\n", line.count("\n") + 2)[-1]
             command_output = re_rc_and_end_echo.sub("", command_output)
 
-        command_output = command_output.strip("\n")
+        # the START printf's own newline precedes the real output, and
+        # rc_and_end's own leading "\n" follows it; strip exactly those
+        # two, not every newline, so the command's own blank lines survive.
+        command_output = command_output.removeprefix("\n").removesuffix("\n")
 
         # trailing content after the end marker (e.g. the next prompt) that
         # the next capture must still include.

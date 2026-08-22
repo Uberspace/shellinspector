@@ -47,19 +47,30 @@ def test_login_creates_tmux_session(shell):
     assert shell._session_name in result.stdout.splitlines()
 
 
-def test_run_command_output():
-    shell = TmuxShell(timeout=5)
-    shell.login()
-
-    output = shell.run_command("echo a && echo b")
-    assert output == "a\nb"
-    assert shell.get_returncode() == 0
-
-    output = shell.run_command("echo c")
-    assert output == "c"
-    assert shell.get_returncode() == 0
-
-    shell.close()
+@pytest.mark.parametrize(
+    "line,result",
+    [
+        (
+            "echo a",
+            "a\n",
+        ),
+        (
+            "echo -n a",
+            "a",
+        ),
+        (
+            "printf '\\na\\n\\nb\\n\\n\\n'",
+            "\na\n\nb\n\n\n",
+        ),
+        (
+            "echo a && echo b",
+            "a\nb\n",
+        ),
+    ],
+)
+def test_run_command_output(shell, line, result):
+    output = shell.run_command(line)
+    assert output == result
 
 
 def test_run_command_returncode(shell):
@@ -73,7 +84,7 @@ def test_run_command_returncode(shell):
 def test_run_command_state_persists(shell):
     shell.run_command("cd /tmp")
     output = shell.run_command("pwd")
-    assert output == "/tmp"
+    assert output == "/tmp\n"
 
 
 def test_run_command_after_output_heavy_command(shell):
@@ -82,7 +93,7 @@ def test_run_command_after_output_heavy_command(shell):
     # still located correctly afterwards.
     shell.run_command("seq 1 200")
     output = shell.run_command("echo after_seq")
-    assert output == "after_seq"
+    assert output == "after_seq\n"
 
 
 def test_scrollback_not_cleared(shell):
@@ -185,8 +196,8 @@ def test_set_environment(shell):
         }
     )
 
-    assert shell.run_command("echo $VAR1") == "aa"
-    assert shell.run_command("echo $VAR2") == "bb"
+    assert shell.run_command("echo $VAR1") == "aa\n"
+    assert shell.run_command("echo $VAR2") == "bb\n"
 
 
 def test_two_sessions_are_independent():
@@ -197,8 +208,8 @@ def test_two_sessions_are_independent():
 
     shell1.set_environment({"ONLY_IN_1": "yes"})
 
-    assert shell1.run_command("echo $ONLY_IN_1") == "yes"
-    assert shell2.run_command("echo $ONLY_IN_1") == ""
+    assert shell1.run_command("echo $ONLY_IN_1") == "yes\n"
+    assert shell2.run_command("echo $ONLY_IN_1") == "\n"
 
     shell1.close()
     shell2.close()
@@ -226,7 +237,7 @@ def test_not_verbose_by_default_prints_nothing(shell, capsys):
 
 def test_multiline_output(shell):
     output = shell.run_command("printf 'l1\\nl2\\nl3\\n'")
-    assert output == "l1\nl2\nl3"
+    assert output == "l1\nl2\nl3\n"
 
 
 def test_empty_command(shell):
@@ -235,14 +246,14 @@ def test_empty_command(shell):
     assert shell.get_returncode() == 0
 
     output = shell.run_command("echo after_empty")
-    assert output == "after_empty"
+    assert output == "after_empty\n"
 
 
 def test_command_id_uniqueness_does_not_confuse_markers(shell):
     # run a command whose *output* contains text that looks like a marker,
     # to make sure we don't stop early on it.
     output = shell.run_command("echo '__COMMAND_END__:notarealid:0'")
-    assert output == "__COMMAND_END__:notarealid:0"
+    assert output == "__COMMAND_END__:notarealid:0\n"
     assert shell.get_returncode() == 0
 
 
@@ -251,7 +262,7 @@ def test_heredoc(shell):
     # ispec files. The parser joins this into a single multi-line command
     # string before it reaches run_command.
     output = shell.run_command("cat <<HERE\nfoo\nbar\nHERE")
-    assert output == "foo\nbar"
+    assert output == "foo\nbar\n"
 
 
 def test_nested_command_substitution(shell):
@@ -259,21 +270,21 @@ def test_nested_command_substitution(shell):
     # $(printf "%06d" $((16#$(openssl rand -hex 4) % 1000000))) - $() nested
     # two levels deep with arithmetic expansion mixed in.
     output = shell.run_command("echo $(echo $(echo nested))")
-    assert output == "nested"
+    assert output == "nested\n"
 
 
 def test_single_and_double_quote_mix(shell):
     # roles/lang-php/tests/config_web.ispec mixes single and double quotes
     # with embedded $variables and escaped double-quotes in one line.
     output = shell.run_command("""echo '<?php $e = "value"; echo "$e\\n";'""")
-    assert output == """<?php $e = "value"; echo "$e\\n";"""
+    assert output == """<?php $e = "value"; echo "$e\\n";\n"""
 
 
 def test_pipe_and_stderr_redirect(shell):
     # roles/lang-php/tests/composer.ispec pipes through multiple commands
     # and redirects 2>&1.
     output = shell.run_command("echo hello 2>&1 | tr a-z A-Z | grep HELLO")
-    assert output == "HELLO"
+    assert output == "HELLO\n"
     assert shell.get_returncode() == 0
 
 
@@ -313,7 +324,7 @@ def test_semicolon_then_echo_rc(shell):
     # `passwd; echo $?` - a command whose own output includes the return
     # code of a prior, semicolon-separated command.
     output = shell.run_command("false; echo $?")
-    assert output == "1"
+    assert output == "1\n"
     assert shell.get_returncode() == 0
 
 
@@ -322,23 +333,23 @@ def test_exported_function_persists(shell):
     # with `export -f`, then calls it from a later command line.
     shell.run_command("greet() { echo hi $1; }; export -f greet")
     output = shell.run_command("greet world")
-    assert output == "hi world"
+    assert output == "hi world\n"
 
 
 def test_remote_run_command_output(remote_shell):
     output = remote_shell.run_command("echo a && echo b")
-    assert output == "a\nb"
+    assert output == "a\nb\n"
     assert remote_shell.get_returncode() == 0
 
     output = remote_shell.run_command("echo c")
-    assert output == "c"
+    assert output == "c\n"
     assert remote_shell.get_returncode() == 0
 
 
 def test_remote_run_command_state_persists(remote_shell):
     remote_shell.run_command("cd /tmp")
     output = remote_shell.run_command("pwd")
-    assert output == "/tmp"
+    assert output == "/tmp\n"
 
 
 def test_remote_get_environment(remote_shell):
@@ -354,7 +365,7 @@ def test_remote_login_is_login_shell(remote_shell):
     # remote sessions are launched as `bash -l` so PATH/profile setup
     # matches what an interactive `ssh host` session gets.
     output = remote_shell.run_command("shopt -q login_shell && echo yes || echo no")
-    assert output == "yes"
+    assert output == "yes\n"
 
 
 def test_remote_control_master_reused_across_commands(remote_shell):
@@ -402,8 +413,8 @@ def test_two_remote_sessions_do_not_share_control_socket(ssh_key_path):
     assert shell1._control_path != shell2._control_path
 
     shell1.set_environment({"ONLY_IN_1": "yes"})
-    assert shell1.run_command("echo $ONLY_IN_1") == "yes"
-    assert shell2.run_command("echo $ONLY_IN_1") == ""
+    assert shell1.run_command("echo $ONLY_IN_1") == "yes\n"
+    assert shell2.run_command("echo $ONLY_IN_1") == "\n"
 
     shell1.close()
     shell2.close()
