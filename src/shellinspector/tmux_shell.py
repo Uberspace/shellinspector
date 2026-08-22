@@ -17,8 +17,10 @@ COMMAND_END = "__COMMAND_END__"
 
 
 class TimeoutException(Exception):
-    def __init__(self, output_so_far: str):
+    def __init__(self, output_so_far: str, region: str, timeout: int):
         self.output_so_far = output_so_far
+        self.timeout = timeout
+        self.region = region
         super().__init__()
 
 
@@ -85,7 +87,11 @@ class TmuxShell:
             if self.verbose:
                 print(f"+ {shlex.join(full_cmd)}")
                 print((ex.output or b"").decode(errors="replace").strip())
-            raise TimeoutException((ex.output or b"").decode(errors="replace")) from ex
+            raise TimeoutException(
+                (ex.output or b"").decode(errors="replace"),
+                "local",
+                timeout,
+            ) from ex
 
         if self.verbose:
             print(f"+ {shlex.join(full_cmd)}")
@@ -302,7 +308,7 @@ class TmuxShell:
 
             if time.monotonic() > deadline:
                 self.close()
-                raise TimeoutException(output)
+                raise TimeoutException(output, "global", self.timeout)
 
             time.sleep(self.poll_interval)
 

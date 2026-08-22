@@ -278,7 +278,7 @@ class ShellRunner:
                 RunnerEvent.ERROR,
                 cmd,
                 {
-                    "message": "timeout, could not find prompt for command",
+                    "message": f"{ex.region} timeout, {ex.timeout}s, could not find end of command output",
                     "actual": ex.output_so_far,
                 },
             )
