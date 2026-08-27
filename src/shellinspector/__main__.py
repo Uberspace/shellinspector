@@ -86,6 +86,7 @@ def run(
     spec_file_paths,
     identity,
     tags,
+    skip_tags,
     verbose,
     skip_retry,
     fail_early,
@@ -95,6 +96,7 @@ def run(
     ssh_config["ssh_key"] = identity
 
     tags = tags.split(",") if tags else []
+    skip_tags = skip_tags.split(",") if skip_tags else []
 
     context = {
         "SI_TARGET": ssh_config["server"],
@@ -135,6 +137,9 @@ def run(
             continue
 
         if tags and not any(t in spec_file.tags for t in tags):
+            continue
+
+        if skip_tags and any(t in spec_file.tags for t in skip_tags):
             continue
 
         if spec_file.examples:
@@ -292,6 +297,11 @@ def parse_args(argv=None):
         "--tags",
         required=False,
         help="only run spec files which list the given tags in their frontmatter",
+    )
+    parser.add_argument(
+        "--skip-tags",
+        required=False,
+        help="skip spec files which list any of the given tags in their frontmatter",
     )
     parser.add_argument(
         "--skip-retry",
