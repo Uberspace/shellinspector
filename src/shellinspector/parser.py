@@ -124,6 +124,7 @@ class Specfile:
         self.fixture_specfile_pre = None
         self.fixture_specfile_post = None
         self.applied_example = None
+        self.tags = []
         self.settings = Settings()
         self.is_fixture = is_fixture
 
