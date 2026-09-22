@@ -1,0 +1,18 @@
+---
+fixture:
+  name: create_user_2
+  scope: run
+settings:
+  fixture_dirs:
+    - fixtures
+examples:
+  - marker: a
+  - marker: b
+---
+# regression test: a run-scoped fixture must still run (and SI_USER must
+# still resolve) for spec files that use "examples", since example variants
+# are parsed via Specfile.copy()
+$ whoami
+create_user_2
+$ echo {marker}
+{marker}

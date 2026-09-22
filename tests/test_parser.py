@@ -723,3 +723,30 @@ def test_fixture():
     assert len(specfile.fixture_specfile_pre.commands) == 2
     assert specfile.fixture_specfile_post
     assert len(specfile.fixture_specfile_post.commands) == 3
+
+
+def test_fixture_survives_as_example():
+    specfile = parse(
+        Path(__file__).parent / "some.ispec",
+        make_stream(
+            [
+                "---",
+                "fixture:",
+                "  name: e2e/fixtures/create_user",
+                "  scope: run",
+                "examples:",
+                "  - foo: bar",
+                "---",
+            ]
+        ),
+    )
+
+    assert not specfile.errors, specfile.errors
+    assert specfile.fixture_specfile_pre
+
+    example = specfile.as_example(specfile.examples[0])
+
+    assert example.fixture == specfile.fixture
+    assert example.fixture_scope == specfile.fixture_scope
+    assert example.fixture_specfile_pre is specfile.fixture_specfile_pre
+    assert example.fixture_specfile_post is specfile.fixture_specfile_post

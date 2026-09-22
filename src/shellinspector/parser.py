@@ -129,7 +129,7 @@ class Specfile:
         self.is_fixture = is_fixture
 
     def copy(self):
-        return Specfile(
+        new = Specfile(
             self.path,
             [dataclasses.replace(c) for c in self.commands],
             [dataclasses.replace(e) for e in self.errors],
@@ -137,6 +137,13 @@ class Specfile:
             [e.copy() for e in self.examples],
             is_fixture=self.is_fixture,
         )
+        new.fixture = self.fixture
+        new.fixture_scope = self.fixture_scope
+        new.fixture_specfile_pre = self.fixture_specfile_pre
+        new.fixture_specfile_post = self.fixture_specfile_post
+        new.tags = list(self.tags)
+        new.settings = self.settings
+        return new
 
     def as_example(self, example):
         copy = self.copy()
